@@ -12,7 +12,7 @@ class detect_faces_Haar():
         self.faces = f_cascade.detectMultiScale(gray, scaleFactor=scaleFactor, minNeighbors=minNeighbors,minSize=minSize);   
         #go over list of faces and draw them as rectangles on original colored img
 
-
+    
     def extract_face(self,image,x, y, w, h):
         self.extracted_face=image[y:y+h, x:x+w]
         cv2.imshow("Extracted Face",self.extracted_face)

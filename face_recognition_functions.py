@@ -18,13 +18,13 @@ class face_recognition():
         face_filename = '%s/%d.pgm' % (output_folder, count)
         cv2.imwrite(face_filename, face_img)
 
-    def read_images(path, image_size):
-        names = []
-        training_images, training_labels = [], []
+    def read_images(self,path, image_size):
+        self.names = []
+        self.training_images, self.training_labels = [], []
         label = 0
         for dirname, subdirnames, filenames in os.walk(path):
             for subdirname in subdirnames:
-                names.append(subdirname)
+                self.names.append(subdirname)
                 subject_path = os.path.join(dirname, subdirname)
                 for filename in os.listdir(subject_path):
                     img = cv2.imread(os.path.join(subject_path, filename),cv2.IMREAD_GRAYSCALE)
@@ -33,9 +33,9 @@ class face_recognition():
                         # Skip it.
                         continue
                     img = cv2.resize(img, image_size)
-                    training_images.append(img)
-                    training_labels.append(label)
+                    self.training_images.append(img)
+                    self.training_labels.append(label)
                     label += 1
-        training_images = np.asarray(training_images, np.uint8)
-        training_labels = np.asarray(training_labels, np.int32)
-        return names, training_images, training_labels
+        self.training_images = np.asarray(self.training_images, np.uint8)
+        self.training_labels = np.asarray(self.training_labels, np.int32)
+
