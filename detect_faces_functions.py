@@ -9,8 +9,11 @@ class detect_faces_Haar():
         #convert the test image to gray image as opencv face detector expects gray images
         gray = cv2.cvtColor(self.img_copy, cv2.COLOR_BGR2GRAY)       
         #let's detect multiscale (some images may be closer to camera than others) images
-        faces = f_cascade.detectMultiScale(gray, scaleFactor=scaleFactor, minNeighbors=minNeighbors,minSize=minSize);   
+        self.faces = f_cascade.detectMultiScale(gray, scaleFactor=scaleFactor, minNeighbors=minNeighbors,minSize=minSize);   
         #go over list of faces and draw them as rectangles on original colored img
-        for (x, y, w, h) in faces:
-            cv2.rectangle(self.img_copy, (x, y), (x+w, y+h), (0, 255, 0), 2)
+
+
+    def extract_face(self,image,x, y, w, h):
+        self.extracted_face=image[y:y+h, x:x+w]
+        cv2.imshow("Extracted Face",self.extracted_face)
         
