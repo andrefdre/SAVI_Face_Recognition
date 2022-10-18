@@ -3,7 +3,6 @@
 
 import csv
 from copy import deepcopy
-from turtle import color
 
 import cv2
 import numpy as np

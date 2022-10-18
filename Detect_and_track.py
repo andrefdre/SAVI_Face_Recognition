@@ -2,7 +2,6 @@ import cv2
 import csv
 import numpy as np
 from copy import deepcopy
-from turtle import color
 from functions_2 import Detection , Tracker
 
 # Load the cascade
