@@ -3,7 +3,7 @@
 import cv2
 import os
 import numpy as np  
-from detect_faces_functions import detect_faces_Haar
+from detect_faces_functions import detect_faces_Haar , detection
 from face_recognition_functions import face_recognition
 
 
@@ -14,25 +14,24 @@ def main():
     # To capture video from webcam. 
     cap = cv2.VideoCapture(0)
 
+
+
     while True:
         # Read the frame
         _, img = cap.read()
 
-        #Calls the function that will detect the faces
-        #Initializes the detection class
+        #Initializes the detection class which gives all the detected faces in the frame
         detected_faces=detect_faces_Haar(face_cascade, img, scaleFactor = 1.03,minNeighbors=7,minSize=(120, 120))
+
         #Loops all the detected faces and draws a rectangle
         for (x, y, w, h) in detected_faces.faces:
+            #Converts the frame to Gray Scale
+            detected=detection(img,x,y,w,h)
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            roi_gray = gray[x:x+w, y:y+h]
-            if roi_gray.size == 0:
-                # The ROI is empty. Maybe the face is at the image edge.
-                # Skip it.
-                continue
-            cv2.rectangle(detected_faces.img_copy, (x, y), (x+w, y+h), (0, 255, 0), 2)
-            detected_faces.extract_face(img,x, y, w, h)
+            
+            #Calls the recognition class that will try to recognize the face
             face_recognized=face_recognition()
-            face_recognized.save_new_face(detected_faces.extracted_face,0)
+            face_recognized.save_new_face(detected.extracted_face,0)
             path_to_training_images = '../data/at'
             training_image_size = (200, 200)
             face_recognized.read_images(path_to_training_images, training_image_size)
@@ -40,6 +39,7 @@ def main():
             roi_gray = gray[x:x+w, y:y+h]
             roi_gray = cv2.resize(roi_gray, training_image_size)
             label, confidence = model.predict(roi_gray)
+            print(confidence,label)
 
         # Display the results
         cv2.imshow('img', detected_faces.img_copy)
