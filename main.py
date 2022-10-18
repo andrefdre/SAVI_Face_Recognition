@@ -26,6 +26,7 @@ def main():
     while True:
         # Read the frame
         _, img = cap.read()
+        print(cap.get(cv2.CAP_PROP_POS_MSEC))
 
         #Initializes the detection class which gives all the detected faces in the frame
         bboxes=detect_faces_Haar(face_cascade, img, scaleFactor = 1.03,minNeighbors=7,minSize=(120, 120))
@@ -38,7 +39,6 @@ def main():
             #Converts the frame to Gray Scale
             detected=detection(img,x,y,w,h,detections_id)
             detections.append(detected)
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             detections_id+=1
         
 
@@ -56,12 +56,11 @@ def main():
         for detect in detections:
             roi_gray = cv2.resize(detect.extracted_face, training_image_size)
             label, confidence = model.predict(roi_gray)
-            print(label,confidence,recognitionModel.training_labels)
             recon=recognition(detect)
             if confidence<70:
-                recon.draw(img,recognitionModel.names[label])
+                recon.draw(img,recognitionModel.names[label],confidence)
             else:
-                recon.draw(img,'Unknown')
+                recon.draw(img,'Unknown','NAN')
                 unknown_count+=1
                 unknown_images.append(detect.extracted_face)
                 if unknown_count>10:
@@ -69,7 +68,6 @@ def main():
                     name=input()
                     recognitionModel.save_new_face(unknown_images,name)
                 cv2.imshow('unknown', detect.extracted_face)
-                print(len(unknown_images))
 
         # Draw all the detections
         for detect in detections:

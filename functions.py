@@ -86,8 +86,9 @@ class recognition():
     def __init__(self,detection):
             self.detection=detection
 
-    def draw(self,image,name):
+    def draw(self,image,name,confidence):
         font = cv2.FONT_HERSHEY_SIMPLEX
         cv2.putText(image,'Name: ' + str(name),(self.detection.x1,self.detection.y1-35), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(image,'Confidence: ' + str(confidence),(self.detection.x1,self.detection.y1-55), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
     
