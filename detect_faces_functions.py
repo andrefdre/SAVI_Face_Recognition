@@ -25,12 +25,15 @@ class detect_faces_Haar():
 class detection(bounding_box):
     def __init__(self, full_image , x, y , w , h):
         super().__init__(x, y, w, h)
+        self.img_gui=full_image
         self.extracted_face=self.extract_face(full_image , x, y , w , h)
 
     def extract_face(self,image,x, y, w, h):
         cv2.imshow("Extracted Face",image[y:y+h, x:x+w])
         return image[y:y+h, x:x+w]
         
-    def draw(self):
-        cv2.rectangle(detected_faces.img_copy, (x, y), (x+w, y+h), (0, 255, 0), 2)
-        cv2.putText(img,'OpenCV',(10,500), font, 4, (255, 255, 255), 2, cv2.LINE_AA)
+    def draw(self,image):
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        image = cv2.rectangle(image, (self.x1, self.y1), (self.x2, self.y2), (0, 255, 0), 2)
+        image = cv2.putText(image,'Det',(self.x1,self.y1-15), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
+        return image

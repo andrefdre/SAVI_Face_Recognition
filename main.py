@@ -21,17 +21,21 @@ def main():
         _, img = cap.read()
 
         #Initializes the detection class which gives all the detected faces in the frame
-        detected_faces=detect_faces_Haar(face_cascade, img, scaleFactor = 1.03,minNeighbors=7,minSize=(120, 120))
+        bboxes=detect_faces_Haar(face_cascade, img, scaleFactor = 1.03,minNeighbors=7,minSize=(120, 120))
 
+        detections=[]
         #Loops all the detected faces and draws a rectangle
-        for (x, y, w, h) in detected_faces.faces:
+        for bbox in bboxes.faces:
+            (x, y, w, h) = bbox
             #Converts the frame to Gray Scale
             detected=detection(img,x,y,w,h)
+            img = detected.draw(img)
+            detections.append(detected)
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             
             #Calls the recognition class that will try to recognize the face
             face_recognized=face_recognition()
-            face_recognized.save_new_face(detected.extracted_face,0)
+            #face_recognized.save_new_face(detected.extracted_face,0)
             path_to_training_images = '../data/at'
             training_image_size = (200, 200)
             face_recognized.read_images(path_to_training_images, training_image_size)
@@ -42,7 +46,7 @@ def main():
             print(confidence,label)
 
         # Display the results
-        cv2.imshow('img', detected_faces.img_copy)
+        cv2.imshow('img', img)
         # Stop if q key is pressed
         if cv2.waitKey(1) == ord('q'):
                 break
