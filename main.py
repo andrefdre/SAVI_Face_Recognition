@@ -1,66 +1,104 @@
-#!/usr/bin/env python3
-
 import cv2
-import os
-import numpy as np  
-from functions import detect_faces_Haar , detection ,face_recognition
+import csv
+import numpy as np
+from copy import deepcopy
+from functions import Detection , Tracker
+
+# Load the cascade
+face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+
+# Count number of persons in the database
+number_of_persons = 0
+csv_reader = csv.reader(open('database_person.top'))
+for row in csv_reader:
+    if len(row) != 3: # skip badly formatted rows
+        continue
+
+    person_number, name , img_path = row
+    
+    person_number = int(person_number) # convert to number format (integer)
+    if person_number >= number_of_persons:
+        number_of_persons = person_number + 1
+
+    # memorize the face
+    #face = face_cascade.detectMultiScale(img_path,scaleFactor = 1.1, minNeighbors = 4)
 
 
 
-def main():
-    # Load the cascade
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-    model = cv2.face.LBPHFaceRecognizer_create()
-    # To capture video from webcam. 
-    cap = cv2.VideoCapture(0)
+# Create the colors for each person
+colors = np.random.randint(0, high=255, size=(number_of_persons, 3), dtype=int)
 
-    trackings=[]
+# initialize variables
+detection_counter = 0
+tracker_counter = 0
+trackers = []
+iou_threshold = 0.8
+frame_counter=0
 
-    while True:
-        # Read the frame
-        _, img = cap.read()
+# To capture video from webcam. 
+cap = cv2.VideoCapture(0)
 
-        #Initializes the detection class which gives all the detected faces in the frame
-        bboxes=detect_faces_Haar(face_cascade, img, scaleFactor = 1.03,minNeighbors=7,minSize=(120, 120))
+while True:
+    # Read the frame
+    ret, img = cap.read()
+    if ret == False:
+        break
 
-        detections=[]
-        #Loops all the detected faces and draws a rectangle
-        for bbox in bboxes.faces:
-            (x, y, w, h) = bbox
-            #Converts the frame to Gray Scale
-            detected=detection(img,x,y,w,h)
-            detections.append(detected)
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
+    # Convert to grayscale
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    image_gui = deepcopy(img)
 
+    # Detect the faces
+    faces = face_cascade.detectMultiScale(gray,scaleFactor = 1.1, minNeighbors = 4)
 
-            #Calls the recognition class that will try to recognize the face
-            face_recognized=face_recognition()
-            #face_recognized.save_new_face(detected.extracted_face,0)
-            path_to_training_images = '../data/at'
-            training_image_size = (200, 200)
-            face_recognized.read_images(path_to_training_images, training_image_size)
-            model.train(face_recognized.training_images, face_recognized.training_labels)
-            roi_gray = gray[x:x+w, y:y+h]
-            roi_gray = cv2.resize(roi_gray, training_image_size)
-            label, confidence = model.predict(roi_gray)
-            print(confidence,label)
+    # ------------------------------------------
+    # Create Detections per haar cascade bbox
+    # ------------------------------------------
+    detections = []
+    for bbox in faces: 
+        x1, y1, w, h = bbox
+        detection = Detection(x1, y1, w, h, gray, id=detection_counter)
+        detection_counter += 1
+        detection.draw(image_gui)
+        detections.append(detection)
+        #cv2.imshow('detection ' + str(detection.id), detection.image  )
 
-        # Draw everything
-        for detected in detections:
-            img = detected.draw(img)
-        
-        # Display the results
-        cv2.imshow('img', img)
-        # Stop if q key is pressed
-        if cv2.waitKey(1) == ord('q'):
-                break
+    # ------------------------------------------
+    # For each detection, see if there is a tracker to which it should be associated
+    # ------------------------------------------
+    for detection in detections: # cycle all detections
+        for tracker in trackers: # cycle all trackers
+            tracker_bbox = tracker.detections[-1]
+            iou = detection.computeIOU(tracker_bbox)
+            #print('IOU( T' + str(tracker.id) + ' D' + str(detection.id) + ' ) = ' + str(iou))
+            if iou > iou_threshold: # associate detection with tracker 
+                tracker.addDetection(detection)
 
-    #Release all windows
-    cap.release()
-    cv2.destroyAllWindows()
+    # ------------------------------------------
+    # Create Tracker for each detection
+    # ------------------------------------------
+    if frame_counter == 0:
+        for detection in detections:
+            tracker = Tracker(detection, id=tracker_counter)
+            tracker_counter += 1
+            trackers.append(tracker)
 
+    # ------------------------------------------
+    # Draw stuff
+    # ------------------------------------------
 
+    # Draw trackers
+    for tracker in trackers:
+        tracker.draw(image_gui)
 
-if __name__ == '__main__':
-    main()
+    # Display
+    cv2.imshow('img', image_gui)
+
+    # Stop if escape key is pressed
+    k = cv2.waitKey(30) & 0xff
+    if k==27:
+        break
+
+# Release the VideoCapture object
+cap.release()
+cv2.destroyAllWindows()
