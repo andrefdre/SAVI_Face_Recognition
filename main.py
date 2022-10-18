@@ -3,8 +3,8 @@
 import cv2
 import os
 import numpy as np  
-from detect_faces_functions import detect_faces_Haar , detection
-from face_recognition_functions import face_recognition
+from functions import detect_faces_Haar , detection ,face_recognition
+
 
 
 def main():
@@ -14,7 +14,7 @@ def main():
     # To capture video from webcam. 
     cap = cv2.VideoCapture(0)
 
-
+    trackings=[]
 
     while True:
         # Read the frame
@@ -29,10 +29,11 @@ def main():
             (x, y, w, h) = bbox
             #Converts the frame to Gray Scale
             detected=detection(img,x,y,w,h)
-            img = detected.draw(img)
             detections.append(detected)
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            
+        
+
+
             #Calls the recognition class that will try to recognize the face
             face_recognized=face_recognition()
             #face_recognized.save_new_face(detected.extracted_face,0)
@@ -45,6 +46,10 @@ def main():
             label, confidence = model.predict(roi_gray)
             print(confidence,label)
 
+        # Draw everything
+        for detected in detections:
+            img = detected.draw(img)
+        
         # Display the results
         cv2.imshow('img', img)
         # Stop if q key is pressed
