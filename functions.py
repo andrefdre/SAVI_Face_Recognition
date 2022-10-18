@@ -1,47 +1,81 @@
 #!/usr/bin/env python3
 
+import os
 import cv2
 import numpy as np
-import os
 
-class bounding_box():
-    def __init__(self,x,y,w,h):
-        self.x1=x
-        self.y1=y
-        self.w=w
-        self.h=h
-        self.x2=self.x1+self.w
-        self.y2=self.y1+self.h
 
-class detect_faces_Haar():
-    def __init__(self,f_cascade, colored_img, scaleFactor = 1.2,minNeighbors=5,minSize=(50, 50)):
-        #just making a copy of image passed, so that passed image is not changed
-        self.img_copy = colored_img.copy()
-        #convert the test image to gray image as opencv face detector expects gray images
-        gray = cv2.cvtColor(self.img_copy, cv2.COLOR_BGR2GRAY)       
-        #let's detect multiscale (some images may be closer to camera than others) images
-        self.faces = f_cascade.detectMultiScale(gray, scaleFactor=scaleFactor, minNeighbors=minNeighbors,minSize=minSize);   
-        #go over list of faces and draw them as rectangles on original colored img
-
+class BoundingBox:
     
-class detection(bounding_box):
-    def __init__(self, full_image , x, y , w , h, id):
-        super().__init__(x, y, w, h)
-        self.img_gui=full_image
-        self.extracted_face=self.extract_face(full_image , x, y , w , h)
-        self.id=id
 
-    def extract_face(self,image,x, y, w, h):
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) 
-        cv2.imshow("Extracted Face",gray[y:y+h, x:x+w])
-        return gray[y:y+h, x:x+w]
+    def __init__(self, x1, y1, w, h):
+        self.x1 = x1
+        self.y1 = y1
+        self.w = w
+        self.h = h
+        self.area = w * h
+
+        self.x2 = self.x1 + self.w
+        self.y2 = self.y1 + self.h
+
+
+    def computeIOU(self, bbox2):
+    
+        x1_intr = min(self.x1, bbox2.x1)             
+        y1_intr = min(self.y1, bbox2.y1)             
+        x2_intr = max(self.x2, bbox2.x2)
+        y2_intr = max(self.y2, bbox2.y2)
+
+        w_intr = x2_intr - x1_intr
+        h_intr = y2_intr - y1_intr
+        A_intr = w_intr * h_intr
+
+        A_union = self.area + bbox2.area - A_intr
         
-    def draw(self,image):
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        image = cv2.rectangle(image, (self.x1, self.y1), (self.x2, self.y2), (0, 255, 0), 2)
-        image = cv2.putText(image,'Det ' + str(self.id),(self.x1,self.y1-15), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+        return A_intr / A_union
+
+    def extractSmallImage(self, image_full):
+        self.extracted_face = image_full[self.y1:self.y1+self.h, self.x1:self.x1+self.w]
+
+
+
+class Detection(BoundingBox):
+
+    def __init__(self, x1, y1, w, h, image_full, id):
+        super().__init__(x1,y1,w,h) # call the super class constructor        
+        self.id = id
+        self.extractSmallImage(image_full)
+
+    def draw(self, image_gui, color=(255,0,0)):
+        cv2.rectangle(image_gui,(self.x1,self.y1),(self.x2, self.y2),color,3)
+
+        image = cv2.putText(image_gui, 'D' + str(self.id), (self.x1, self.y1-5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA)
         return image
 
+class Tracker():
+
+    def __init__(self, detection, id):
+        self.detections = [detection]
+        self.id = id
+
+
+    def draw(self, image_gui, color=(255,0,255)):
+        last_detection = self.detections[-1] # get the last detection
+
+        cv2.rectangle(image_gui,(last_detection.x1,last_detection.y1),(last_detection.x2, last_detection.y2),color,3)
+
+        cv2.putText(image_gui, 'T' + str(self.id), (last_detection.x2-40, last_detection.y1-5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA)
+
+    def addDetection(self, detection):
+        self.detections.append(detection)
+
+
+    def __str__(self):
+        text =  'T' + str(self.id) + ' Detections = ['
+        for detection in self.detections:
+            text += str(detection.id) + ', '
+
+        return text
 
 
 class recognition_model():
@@ -84,7 +118,7 @@ class recognition_model():
 
 class recognition():
     def __init__(self,detection):
-            self.detection=detection
+        self.detection=detection
 
     def draw(self,image,name,confidence):
         font = cv2.FONT_HERSHEY_SIMPLEX
@@ -92,3 +126,4 @@ class recognition():
         cv2.putText(image,'Confidence: ' + str(confidence),(self.detection.x1,self.detection.y1-55), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
     
+
