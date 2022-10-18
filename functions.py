@@ -40,8 +40,8 @@ class detection(bounding_box):
         image = cv2.putText(image,'Det',(self.x1,self.y1-15), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
         return image
 
-
-
+# class tracking(self,video):
+    
 class face_recognition():
     def __init__(self): 
         print("not yet done")
