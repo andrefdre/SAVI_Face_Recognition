@@ -3,7 +3,7 @@
 import cv2
 import os
 import numpy as np  
-from functions import detect_faces_Haar , detection ,face_recognition
+from functions import detect_faces_Haar , detection ,recognition_model,recognition
 
 
 
@@ -13,6 +13,13 @@ def main():
     model = cv2.face.LBPHFaceRecognizer_create()
     # To capture video from webcam. 
     cap = cv2.VideoCapture(0)
+
+    # Tell general information for recognition functions
+    path_to_training_images= '../data/at'
+    training_image_size= (200, 200)
+    names=[]
+    unknown_count=0
+    unknown_images=[]
 
     trackings=[]
 
@@ -24,31 +31,49 @@ def main():
         bboxes=detect_faces_Haar(face_cascade, img, scaleFactor = 1.03,minNeighbors=7,minSize=(120, 120))
 
         detections=[]
+        detections_id=0
         #Loops all the detected faces and draws a rectangle
         for bbox in bboxes.faces:
             (x, y, w, h) = bbox
             #Converts the frame to Gray Scale
-            detected=detection(img,x,y,w,h)
+            detected=detection(img,x,y,w,h,detections_id)
             detections.append(detected)
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            detections_id+=1
         
 
 
-            #Calls the recognition class that will try to recognize the face
-            face_recognized=face_recognition()
-            #face_recognized.save_new_face(detected.extracted_face,0)
-            path_to_training_images = '../data/at'
-            training_image_size = (200, 200)
-            face_recognized.read_images(path_to_training_images, training_image_size)
-            model.train(face_recognized.training_images, face_recognized.training_labels)
-            roi_gray = gray[x:x+w, y:y+h]
-            roi_gray = cv2.resize(roi_gray, training_image_size)
-            label, confidence = model.predict(roi_gray)
-            print(confidence,label)
+        ############################################
+        # Recognition
+        ###########################################
 
-        # Draw everything
-        for detected in detections:
-            img = detected.draw(img)
+        #Constructs the class for recognition 
+        recognitionModel =recognition_model(path_to_training_images, training_image_size)
+        #Trains the model
+        model.train(recognitionModel.training_images, recognitionModel.training_labels)
+
+        #Loops all the detections and finds the person
+        for detect in detections:
+            roi_gray = cv2.resize(detect.extracted_face, training_image_size)
+            label, confidence = model.predict(roi_gray)
+            print(label,confidence,recognitionModel.training_labels)
+            recon=recognition(detect)
+            if confidence<70:
+                recon.draw(img,recognitionModel.names[label])
+            else:
+                recon.draw(img,'Unknown')
+                unknown_count+=1
+                unknown_images.append(detect.extracted_face)
+                if unknown_count>10:
+                    print("What's the person's name: ")
+                    name=input()
+                    recognitionModel.save_new_face(unknown_images,name)
+                cv2.imshow('unknown', detect.extracted_face)
+                print(len(unknown_images))
+
+        # Draw all the detections
+        for detect in detections:
+            img = detect.draw(img)
         
         # Display the results
         cv2.imshow('img', img)
