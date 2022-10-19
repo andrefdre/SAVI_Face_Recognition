@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from cmath import isnan
 import os
 import cv2
 import numpy as np
@@ -8,7 +9,7 @@ import numpy as np
 # Tracker Models                            #
 #############################################
 tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
-tracker_type = tracker_types[7]
+tracker_type = tracker_types[2]
 
 if tracker_type == 'BOOSTING':
     tracker_model = cv2.legacy.TrackerBoosting_create()
@@ -106,6 +107,10 @@ class Tracker():
         self.template = None
         # Gives an ID to the tracker
         self.id = id
+        # Name of the person
+        self.name=None
+        # Status of the tracker
+        self.active=True
         # Initializes the tracker and associates the detection
         self.addDetection(detection,image)
 
@@ -114,12 +119,16 @@ class Tracker():
     def draw(self, image_gui, color=(255,0,255)):
         # Gets the last Bounding Box to use its coordinates 
         bbox = self.bboxes[-1] # get last bbox
-        # Draws the rectangle
-        image_gui = cv2.rectangle(image_gui,(bbox.x1,bbox.y1),(bbox.x2, bbox.y2),color,3)
-        # Puts the Tracking ID
-        image_gui = cv2.putText(image_gui, 'T' + str(self.id), (bbox.x2-40, bbox.y1-5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA)
-        # Returns the modified image
-        return image_gui
+        # If the tracker never disapeared from frame draw it
+        if self.active==True:
+            # Draws the rectangle
+            image_gui = cv2.rectangle(image_gui,(bbox.x1,bbox.y1),(bbox.x2, bbox.y2),color,3)
+            # Puts the Tracking ID
+            image_gui = cv2.putText(image_gui, 'T' + str(self.id), (bbox.x2-40, bbox.y1-5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA)
+            # Writes the person name
+            image_gui = cv2.putText(image_gui,'Name: ' + str(self.name),(bbox.x1,bbox.y1-35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+            # Returns the modified image
+            return image_gui
 
     # Function that will add a Detection to the tracker so it can be later used to update itself
     def addDetection(self, detection,image):
@@ -148,7 +157,6 @@ class Tracker():
         text =  'T' + str(self.id) + ' Detections = ['
         for detection in self.detections:
             text += str(detection.id) + ', '
-
         return text
 
 #########################################

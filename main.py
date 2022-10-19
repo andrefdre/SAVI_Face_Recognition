@@ -23,9 +23,9 @@ def main():
     # Tell general information for recognition functions
     path_to_training_images= '../data/at'
     training_image_size= (200, 200)
-    names=[]
     unknown_count=0
     unknown_images=[]
+    stamp_since_last_unknown_image=0
 
     # Capture the video from webcam
     cap = cv2.VideoCapture(0)
@@ -39,7 +39,7 @@ def main():
             break
 
         # Gets the timestamp
-        stamp=cap.get(cv2.CAP_PROP_POS_MSEC)
+        stamp = float(cap.get(cv2.CAP_PROP_POS_MSEC))/1000
 
         # Convert to grayscale
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -97,23 +97,32 @@ def main():
         #Trains the model
         model.train(recognitionModel.training_images, recognitionModel.training_labels)
 
-        #Loops all the detections and finds the person
         for tracker in trackers:
-            roi_gray = cv2.resize(tracker.template, training_image_size)
-            label, confidence = model.predict(roi_gray)
-            recon=recognition(tracker)
-            if confidence<70:
-                image_gui = recon.draw(image_gui,recognitionModel.names[label],confidence)
-            else:
-                recon.draw(img,'Unknown','NAN')
-                unknown_count+=1
-                unknown_images.append(tracker.template)
-                if unknown_count>10:
-                    print("What's the person's name: ")
-                    name=input()
-                    recognitionModel.save_new_face(unknown_images,name)
-                cv2.imshow('unknown', tracker.template)
+            if tracker.name==None:
+                roi_gray = cv2.resize(tracker.template, training_image_size)
+                label, confidence = model.predict(roi_gray)
+                print(confidence)
+                if confidence<60:
+                    tracker.name=recognitionModel.names[label]
+                    recon=recognition(tracker)
+                    image_gui = recon.draw(image_gui,recognitionModel.names[label],confidence)
+                else:
+                    #recon.draw(img,'Unknown','NAN')
+                    unknown_count+=1
+                    unknown_images.append(tracker.template)
+                    stamp_since_last_unknown_image=stamp
+                    if unknown_count>10:
+                        print("What's the person's name: ")
+                        name=input()
+                        print(len(unknown_images))
+                        recognitionModel.save_new_face(unknown_images,name)
+                        unknown_images=[]
+                        unknown_count=0
+                    cv2.imshow('unknown', tracker.template)
 
+        if stamp-stamp_since_last_unknown_image>15:
+            unknown_images=[]
+            unknown_count=0
 
         # ------------------------------------------
         # Draw stuff
