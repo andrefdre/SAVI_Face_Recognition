@@ -10,27 +10,6 @@ def main():
     # Load the cascade
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades +'haarcascade_frontalface_default.xml')
 
-    # Tracker Model
-    tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
-    tracker_type = tracker_types[2]
-
-    if tracker_type == 'BOOSTING':
-        tracker = cv2.legacy.TrackerBoosting_create()
-    if tracker_type == 'MIL':
-        tracker = cv2.TrackerMIL_create() 
-    if tracker_type == 'KCF':
-        tracker = cv2.TrackerKCF_create() 
-    if tracker_type == 'TLD':
-        tracker = cv2.legacy.TrackerTLD_create() 
-    if tracker_type == 'MEDIANFLOW':
-        tracker = cv2.legacy.TrackerMedianFlow_create() 
-    # if tracker_type == 'GOTURN':
-    #     tracker = cv2.TrackerGOTURN_create()
-    if tracker_type == 'MOSSE':
-        tracker = cv2.legacy.TrackerMOSSE_create()
-    if tracker_type == "CSRT":
-        tracker = cv2.TrackerCSRT_create()
-
     # Recognition Model
     model = cv2.face.LBPHFaceRecognizer_create()
 
@@ -88,7 +67,26 @@ def main():
                 iou = detection.computeIOU(tracker_bbox)
                 #print('IOU( T' + str(tracker.id) + ' D' + str(detection.id) + ' ) = ' + str(iou))
                 if iou > iou_threshold: # associate detection with tracker 
-                    tracker.addDetection(detection)
+                    tracker.addDetection(detection, gray)
+
+        # ------------------------------------------
+        # Update Tracker if no new Detection was associated to them
+        # ------------------------------------------
+        for tracker in trackers: # cycle all trackers
+            last_detection_id = tracker.detections[-1].id
+            print(last_detection_id)
+            detection_ids = [d.id for d in detections]
+            if not last_detection_id in detection_ids:
+                print('Tracker ' + str(tracker.id) + ' Doing some tracking')
+                tracker.updateTracker(gray)
+
+
+        # Creates new trackers if the Detection has no tracker associated
+        for detection in detections:
+            if not detection.assigned_to_tracker:
+                tracker = Tracker(detection, id=tracker_counter, image=gray)
+                tracker_counter += 1
+                trackers.append(tracker)
                     
 
         #Constructs the class for recognition 
@@ -102,7 +100,7 @@ def main():
             label, confidence = model.predict(roi_gray)
             recon=recognition(detect)
             if confidence<70:
-                recon.draw(img,recognitionModel.names[label],confidence)
+                image_gui = recon.draw(image_gui,recognitionModel.names[label],confidence)
             else:
                 recon.draw(img,'Unknown','NAN')
                 unknown_count+=1
@@ -113,26 +111,18 @@ def main():
                     recognitionModel.save_new_face(unknown_images,name)
                 cv2.imshow('unknown', detect.extracted_face)
 
-        # ------------------------------------------
-        # Create Tracker for each detection
-        # ------------------------------------------
-        if frame_counter == 0:
-            for detection in detections:
-                tracker = Tracker(detection, id=tracker_counter)
-                tracker_counter += 1
-                trackers.append(tracker)
 
         # ------------------------------------------
         # Draw stuff
         # ------------------------------------------
 
-        # Draw trackers
+        # Draw trackers 
         for tracker in trackers:
-            tracker.draw(image_gui)
+            image_gui = tracker.draw(image_gui)
 
         # Draw all the detections
         for detection in detections:
-            img = detection.draw(img)
+            img = detection.draw(image_gui)
 
         # Display the results
         cv2.imshow('img', img)
