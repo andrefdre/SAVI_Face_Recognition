@@ -148,7 +148,9 @@ class Tracker():
 
         return text
 
-
+#########################################
+# Recognition Class                     #
+#########################################
 class recognition_model():
     def __init__(self,path,image_size): 
         self.names,self.training_images,self.training_labels=self.read_images(path,image_size)
