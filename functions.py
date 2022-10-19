@@ -11,21 +11,21 @@ tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE'
 tracker_type = tracker_types[7]
 
 if tracker_type == 'BOOSTING':
-    tracker = cv2.legacy.TrackerBoosting_create()
+    tracker_model = cv2.legacy.TrackerBoosting_create()
 if tracker_type == 'MIL':
-    tracker = cv2.TrackerMIL_create() 
+    tracker_model = cv2.TrackerMIL_create() 
 if tracker_type == 'KCF':
-    tracker = cv2.TrackerKCF_create() 
+    tracker_model = cv2.TrackerKCF_create() 
 if tracker_type == 'TLD':
-    tracker = cv2.legacy.TrackerTLD_create() 
+    tracker_model = cv2.legacy.TrackerTLD_create() 
 if tracker_type == 'MEDIANFLOW':
-    tracker = cv2.legacy.TrackerMedianFlow_create() 
+    tracker_model = cv2.legacy.TrackerMedianFlow_create() 
 if tracker_type == 'GOTURN':
-    tracker = cv2.TrackerGOTURN_create()
+    tracker_model = cv2.TrackerGOTURN_create()
 if tracker_type == 'MOSSE':
-    tracker = cv2.legacy.TrackerMOSSE_create()
+    tracker_model = cv2.legacy.TrackerMOSSE_create()
 if tracker_type == "CSRT":
-    tracker = cv2.TrackerCSRT_create()
+    tracker_model = cv2.TrackerCSRT_create()
 
 ###################################
 # Bounding Box Class              #
@@ -63,7 +63,7 @@ class BoundingBox:
 
     # Function that will extract the image inside the bounding box
     def extractSmallImage(self, image_full):
-        self.extracted_face = image_full[self.y1:self.y1+self.h, self.x1:self.x1+self.w]
+        return image_full[self.y1:self.y1+self.h, self.x1:self.x1+self.w]
 
 
 ###########################################
@@ -77,7 +77,7 @@ class Detection(BoundingBox):
         # Stores the id 
         self.id = id
         # Extracts the image inside the detected image
-        self.extractSmallImage(image_full)
+        self.extracted_face = self.extractSmallImage(image_full)
         # Initializes the variable that will tell if has a tracker associated
         self.assigned_to_tracker=False
 
@@ -101,7 +101,9 @@ class Tracker():
         # Creates an array of Bounding boxes to later draw them
         self.bboxes = []
         # Initializes the tracker model
-        self.tracker = tracker
+        self.tracker = tracker_model
+        # Template image of the detected face
+        self.template = None
         # Gives an ID to the tracker
         self.id = id
         # Initializes the tracker and associates the detection
@@ -125,6 +127,7 @@ class Tracker():
         self.tracker.init(image, (detection.x1, detection.y1, detection.w, detection.h))
         #Adds the last detection to the tracker
         self.detections.append(detection)
+        self.template = detection.extractSmallImage(image)
         #Sets the detection to have a tracker assigned
         detection.assigned_to_tracker = True
         bbox = BoundingBox(detection.x1, detection.y1, detection.w, detection.h)
@@ -137,6 +140,7 @@ class Tracker():
          # Creates a new Bounding Box since the bbox given by the tracker as a different construction than what we use
          x1,y1,w,h = bbox
          bbox = BoundingBox(int(x1), int(y1), int(w), int(h))
+         self.template = bbox.extractSmallImage(image_gray)
          # Appends the bbox to be used in the Drawing
          self.bboxes.append(bbox)
 
@@ -188,13 +192,14 @@ class recognition_model():
         return names, training_images, training_labels
 
 class recognition():
-    def __init__(self,detection):
-        self.detection=detection
+    def __init__(self,tracker):
+        self.tracker=tracker
 
     def draw(self,image,name,confidence):
         font = cv2.FONT_HERSHEY_SIMPLEX
-        image = cv2.putText(image,'Name: ' + str(name),(self.detection.x1,self.detection.y1-35), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
-        image = cv2.putText(image,'Confidence: ' + str(confidence),(self.detection.x1,self.detection.y1-55), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+        bbox = self.tracker.bboxes[-1] # get last bbox
+        image = cv2.putText(image,'Name: ' + str(name),(bbox.x1,bbox.y1-35), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+        image = cv2.putText(image,'Confidence: ' + str(confidence),(bbox.x1,bbox.y1-55), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
         return image
     
 

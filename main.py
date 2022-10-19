@@ -98,21 +98,21 @@ def main():
         model.train(recognitionModel.training_images, recognitionModel.training_labels)
 
         #Loops all the detections and finds the person
-        for detect in detections:
-            roi_gray = cv2.resize(detect.extracted_face, training_image_size)
+        for tracker in trackers:
+            roi_gray = cv2.resize(tracker.template, training_image_size)
             label, confidence = model.predict(roi_gray)
-            recon=recognition(detect)
+            recon=recognition(tracker)
             if confidence<70:
                 image_gui = recon.draw(image_gui,recognitionModel.names[label],confidence)
             else:
                 recon.draw(img,'Unknown','NAN')
                 unknown_count+=1
-                unknown_images.append(detect.extracted_face)
+                unknown_images.append(tracker.template)
                 if unknown_count>10:
                     print("What's the person's name: ")
                     name=input()
                     recognitionModel.save_new_face(unknown_images,name)
-                cv2.imshow('unknown', detect.extracted_face)
+                cv2.imshow('unknown', tracker.template)
 
 
         # ------------------------------------------
