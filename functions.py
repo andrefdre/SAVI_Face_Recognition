@@ -4,6 +4,29 @@ import os
 import cv2
 import numpy as np
 
+#############################################
+# Tracker Models                            #
+#############################################
+tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
+tracker_type = tracker_types[2]
+
+if tracker_type == 'BOOSTING':
+    tracker = cv2.legacy.TrackerBoosting_create()
+if tracker_type == 'MIL':
+    tracker = cv2.TrackerMIL_create() 
+if tracker_type == 'KCF':
+    tracker = cv2.TrackerKCF_create() 
+if tracker_type == 'TLD':
+    tracker = cv2.legacy.TrackerTLD_create() 
+if tracker_type == 'MEDIANFLOW':
+    tracker = cv2.legacy.TrackerMedianFlow_create() 
+if tracker_type == 'GOTURN':
+    tracker = cv2.TrackerGOTURN_create()
+if tracker_type == 'MOSSE':
+    tracker = cv2.legacy.TrackerMOSSE_create()
+if tracker_type == "CSRT":
+    tracker = cv2.TrackerCSRT_create()
+
 ###################################
 # Bounding Box Class              #
 ###################################
@@ -78,7 +101,7 @@ class Tracker():
         # Creates an array of Bounding boxes to later draw them
         self.bboxes = []
         # Initializes the tracker model
-        self.tracker = cv2.TrackerCSRT_create()
+        self.tracker = tracker
         # Gives an ID to the tracker
         self.id = id
         # Initializes the tracker and associates the detection
@@ -111,6 +134,7 @@ class Tracker():
     def updateTracker(self,image_gray):
         # Calls the tracker model to update the tracer
          ret, bbox = self.tracker.update(image_gray)
+         print(ret)
          # Creates a new Bounding Box since the bbox given by the tracker as a different construction than what we use
          x1,y1,w,h = bbox
          bbox = BoundingBox(int(x1), int(y1), int(w), int(h))
