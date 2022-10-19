@@ -45,6 +45,7 @@ class Detection(BoundingBox):
         super().__init__(x1,y1,w,h) # call the super class constructor        
         self.id = id
         self.extractSmallImage(image_full)
+        self.assigned_to_tracker=False
 
     def draw(self, image_gui, color=(255,0,0)):
         cv2.rectangle(image_gui,(self.x1,self.y1),(self.x2, self.y2),color,3)
@@ -54,21 +55,48 @@ class Detection(BoundingBox):
 
 class Tracker():
 
-    def __init__(self, detection, id):
+    def __init__(self, detection, id,image):
+        # Creates an array to keep tracking of all the detections
         self.detections = [detection]
+        # Creates an array of Bounding boxes to later draw them
+        self.bboxes = []
+        # Initializes the tracker model
+        self.tracker = cv2.TrackerCSRT_create()
+        # Gives an ID to the tracker
         self.id = id
+        # Initializes the tracker and associates the detection
+        self.addDetection(detection,image)
 
 
     def draw(self, image_gui, color=(255,0,255)):
         last_detection = self.detections[-1] # get the last detection
 
-        cv2.rectangle(image_gui,(last_detection.x1,last_detection.y1),(last_detection.x2, last_detection.y2),color,3)
+        bbox = self.bboxes[-1] # get last bbox
 
-        cv2.putText(image_gui, 'T' + str(self.id), (last_detection.x2-40, last_detection.y1-5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA)
+        print(bbox.x1,bbox.y1,bbox.x2,bbox.y2)
 
-    def addDetection(self, detection):
+        image_gui = cv2.rectangle(image_gui,(bbox.x1,bbox.y1),(bbox.x2, bbox.y2),color,3)
+
+        image_gui = cv2.putText(image_gui, 'T' + str(self.id), (bbox.x2-40, bbox.y1-5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA)
+
+        return image_gui
+
+    def addDetection(self, detection,image):
+        #Initializes the tracker
+        self.tracker.init(image, (detection.x1, detection.y1, detection.w, detection.h))
+        #Adds the last detection to the tracker
         self.detections.append(detection)
+        #Sets the detection to have a tracker assigned
+        detection.assigned_to_tracker = True
+        bbox = BoundingBox(detection.x1, detection.y1, detection.w, detection.h)
+        self.bboxes.append(bbox)
 
+    def updateTracker(self,image_gray):
+         ret, bbox = self.tracker.update(image_gray)
+         # Creates a new Boundix Box since the bbox given by the tracker as a different construction than what we use
+         x1,y1,w,h = bbox
+         bbox = BoundingBox(int(x1), int(y1), int(w), int(h))
+         self.bboxes.append(bbox)
 
     def __str__(self):
         text =  'T' + str(self.id) + ' Detections = ['
@@ -87,7 +115,6 @@ class recognition_model():
         if not os.path.exists(output_folder):
             os.makedirs(output_folder)
         count=0
-        print(len(cutted_faces))
         for cutted_face in cutted_faces:
             face_img = cv2.resize(cutted_face, (200, 200))
             face_filename = '%s/%d.pgm' % (output_folder, count)
@@ -122,8 +149,8 @@ class recognition():
 
     def draw(self,image,name,confidence):
         font = cv2.FONT_HERSHEY_SIMPLEX
-        cv2.putText(image,'Name: ' + str(name),(self.detection.x1,self.detection.y1-35), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
-        cv2.putText(image,'Confidence: ' + str(confidence),(self.detection.x1,self.detection.y1-55), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
-
+        image = cv2.putText(image,'Name: ' + str(name),(self.detection.x1,self.detection.y1-35), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+        image = cv2.putText(image,'Confidence: ' + str(confidence),(self.detection.x1,self.detection.y1-55), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+        return image
     
 
