@@ -134,7 +134,6 @@ class Tracker():
     def updateTracker(self,image_gray):
         # Calls the tracker model to update the tracer
          ret, bbox = self.tracker.update(image_gray)
-         print(ret)
          # Creates a new Bounding Box since the bbox given by the tracker as a different construction than what we use
          x1,y1,w,h = bbox
          bbox = BoundingBox(int(x1), int(y1), int(w), int(h))
