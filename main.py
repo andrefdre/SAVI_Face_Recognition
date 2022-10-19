@@ -17,6 +17,7 @@ def main():
     # Initialize variables
     tracker_counter = 0
     trackers = []
+    detection_counter = 0
     # Threshold for the relation of the detection and tracker
     iou_threshold = 0.8
     # Tell general information for recognition functions
@@ -46,7 +47,6 @@ def main():
         image_gui = deepcopy(img)
         # Create a list of detections and a counter that resets every cycle
         detections=[]
-        detection_counter = 0
 
         # Detect the faces
         faces = face_cascade.detectMultiScale(gray,scaleFactor = 1.1, minNeighbors = 4)
