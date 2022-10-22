@@ -9,7 +9,7 @@ import numpy as np
 # Tracker Models                            #
 #############################################
 tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
-tracker_type = tracker_types[2]
+tracker_type = tracker_types[1]
 
 if tracker_type == 'BOOSTING':
     tracker_model = cv2.legacy.TrackerBoosting_create()
@@ -64,7 +64,7 @@ class BoundingBox:
 
     # Function that will extract the image inside the bounding box
     def extractSmallImage(self, image_full):
-        return image_full[self.y1:self.y1+self.h, self.x1:self.x1+self.w]
+        return image_full[int(self.y1):int(self.y1+self.h), int(self.x1):int(self.x1+self.w)]
 
 
 ###########################################
@@ -136,7 +136,7 @@ class Tracker():
         self.tracker.init(image, (detection.x1, detection.y1, detection.w, detection.h))
         #Adds the last detection to the tracker
         self.detections.append(detection)
-        self.template = detection.extractSmallImage(image)
+        self.template = detection.extracted_face
         #Sets the detection to have a tracker assigned
         detection.assigned_to_tracker = True
         bbox = BoundingBox(detection.x1, detection.y1, detection.w, detection.h)
@@ -146,10 +146,15 @@ class Tracker():
     def updateTracker(self,image_gray):
         # Calls the tracker model to update the tracer
          ret, bbox = self.tracker.update(image_gray)
+         #print(ret)
          # Creates a new Bounding Box since the bbox given by the tracker as a different construction than what we use
+         if not ret:
+            self.active=False
+
          x1,y1,w,h = bbox
          bbox = BoundingBox(int(x1), int(y1), int(w), int(h))
          self.template = bbox.extractSmallImage(image_gray)
+         print(bbox.x1,bbox.y1,bbox.w,bbox.h)
          # Appends the bbox to be used in the Drawing
          self.bboxes.append(bbox)
 

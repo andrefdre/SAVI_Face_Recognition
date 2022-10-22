@@ -79,6 +79,7 @@ def main():
             # If the last id in the tracker is not one of the new Detection update Tracker
             if not last_detection_id in detection_ids:
                 # Update Tracker
+                #print("Tracker doing some tracking")
                 tracker.updateTracker(gray)
 
 
@@ -130,14 +131,16 @@ def main():
 
         # Draw trackers 
         for tracker in trackers:
+            #print("Drawing tracker")
             image_gui = tracker.draw(image_gui)
+
 
         # Draw all the detections
         for detection in detections:
-            img = detection.draw(image_gui)
+            image_gui = detection.draw(image_gui)
 
         # Display the results
-        cv2.imshow('img', img)
+        cv2.imshow('img', image_gui)
         # Stop if q key is pressed
         if cv2.waitKey(1) == ord('q'):
             break
