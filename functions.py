@@ -9,7 +9,7 @@ import numpy as np
 # Tracker Models                            #
 #############################################
 tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
-tracker_type = tracker_types[1]
+tracker_type = tracker_types[7]
 
 if tracker_type == 'BOOSTING':
     tracker_model = cv2.legacy.TrackerBoosting_create()
@@ -128,7 +128,7 @@ class Tracker():
             # Writes the person name
             image_gui = cv2.putText(image_gui,'Name: ' + str(self.name),(bbox.x1,bbox.y1-35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
             # Returns the modified image
-            return image_gui
+        return image_gui
 
     # Function that will add a Detection to the tracker so it can be later used to update itself
     def addDetection(self, detection,image):
@@ -146,7 +146,6 @@ class Tracker():
     def updateTracker(self,image_gray):
         # Calls the tracker model to update the tracer
          ret, bbox = self.tracker.update(image_gray)
-         #print(ret)
          # Creates a new Bounding Box since the bbox given by the tracker as a different construction than what we use
          if not ret:
             self.active=False
@@ -154,7 +153,6 @@ class Tracker():
          x1,y1,w,h = bbox
          bbox = BoundingBox(int(x1), int(y1), int(w), int(h))
          self.template = bbox.extractSmallImage(image_gray)
-         print(bbox.x1,bbox.y1,bbox.w,bbox.h)
          # Appends the bbox to be used in the Drawing
          self.bboxes.append(bbox)
 
