@@ -11,7 +11,7 @@ from functions import Detection , Tracker ,recognition_model,recognition
 
 def main():
     # Load the cascade model for detection
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades +'haarcascade_frontalface_default.xml')
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades +'haarcascade_frontalface_alt.xml')
 
     # Recognition Model
     model = cv2.face.LBPHFaceRecognizer_create()
