@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from cmath import isnan
+import pyttsx3
 import os
 import cv2
 import numpy as np
@@ -78,7 +78,7 @@ class Detection(BoundingBox):
         # Stores the id 
         self.id = id
         # Extracts the image inside the detected image
-        self.extracted_face = self.extractSmallImage(image_full)
+        self.extracted_image = self.extractSmallImage(image_full)
         # Initializes the variable that will tell if has a tracker associated
         self.assigned_to_tracker=False
 
@@ -105,6 +105,8 @@ class Tracker():
         self.tracker = tracker_model
         # Template image of the detected face
         self.template = None
+        # Face inside the tracker
+        self.face= None
         # Gives an ID to the tracker
         self.id = id
         # Name of the person
@@ -136,7 +138,7 @@ class Tracker():
         self.tracker.init(image, (detection.x1, detection.y1, detection.w, detection.h))
         #Adds the last detection to the tracker
         self.detections.append(detection)
-        self.template = detection.extracted_face
+        self.template = detection.extracted_image
         #Sets the detection to have a tracker assigned
         detection.assigned_to_tracker = True
         bbox = BoundingBox(detection.x1, detection.y1, detection.w, detection.h)
@@ -152,7 +154,6 @@ class Tracker():
 
          x1,y1,w,h = bbox
          bbox = BoundingBox(int(x1), int(y1), int(w), int(h))
-         #self.template = bbox.extractSmallImage(image_gray)
          # Appends the bbox to be used in the Drawing
          self.bboxes.append(bbox)
 
@@ -212,5 +213,17 @@ class recognition():
         image = cv2.putText(image,'Name: ' + str(name),(bbox.x1,bbox.y1-35), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
         image = cv2.putText(image,'Confidence: ' + str(confidence),(bbox.x1,bbox.y1-55), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
         return image
+
+
+class Speak():
+    def __init__(self,text):
+        engine = pyttsx3.init()
+        voices = engine.getProperty('voices')
+        engine.setProperty('voice', voices[1].id)
+        engine.setProperty('rate', 200)
+        engine.say(text)
+        engine.runAndWait()
+        engine.stop()
+    
     
 
