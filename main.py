@@ -116,7 +116,6 @@ def main():
                     # If the last id in the tracker is not one of the new Detection update Tracker
                     if not last_detection_id in detection_ids:
                         # Update Tracker
-                        cv2.imshow("template",tracker.template)
                         tracker.updateTracker(gray)
 
 
@@ -207,7 +206,6 @@ def main():
                                 recognitionModel =recognition_model(path_to_training_images, training_image_size)
                                 #Trains the model
                                 model.train(recognitionModel.training_images, recognitionModel.training_labels)
-                            cv2.imshow('unknown', tracker.face)
 
             # If the unrecognized images didn't add one to it's list in a while delete them so it doesn't mix random unknown image captures
             if stamp-stamp_since_last_unknown_image>15:
