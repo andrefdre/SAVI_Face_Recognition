@@ -11,7 +11,7 @@ from functions import Detection , Tracker ,recognition_model,recognition
 
 def main():
     # Load the cascade model for detection
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades +'haarcascade_frontalface_alt.xml')
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades +'haarcascade_upperbody.xml')
 
     # Recognition Model
     model = cv2.face.LBPHFaceRecognizer_create()
@@ -22,7 +22,7 @@ def main():
     detection_counter = 0
     # Threshold for the relation of the detection and tracker
     iou_threshold = 0.9
-    border=50
+    border=5
     # Tell general information for recognition functions
     path_to_training_images= '../data/at'
     training_image_size= (200, 200)
@@ -58,13 +58,12 @@ def main():
 
     with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
 
-    #Loops all the frames
-        while True:
+        #Loops all the frames
+        while cap.isOpened():
             # Read the frame
             ret, img = cap.read()
-
+            # Gets Image size
             height,width,_ = img.shape
-
             #If the frame is invalid break the cycle
             if ret == False:
                 break
@@ -81,32 +80,6 @@ def main():
             image_darkned[border:height-border,border:width-border]=image_gui[border:height-border,border:width-border]
             image_gui=image_darkned
 
-            image_gui = cv2.cvtColor(image_gui, cv2.COLOR_BGR2RGB)
-            # Make Detections
-            results = holistic.process(image_gui)
-            # print(results.face_landmarks)
-                
-            # face_landmarks, pose_landmarks, left_hand_landmarks, right_hand_landmarks
-                
-            # Recolor image back to BGR for rendering
-            image_gui = cv2.cvtColor(image_gui, cv2.COLOR_RGB2BGR)
-
-            mp_drawing.draw_landmarks(image_gui, results.face_landmarks, mp_holistic.FACEMESH_CONTOURS)
-            # Right hand
-            mp_drawing.draw_landmarks(image_gui, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS,
-                mp_drawing.DrawingSpec(color=(80,22,10), thickness=2, circle_radius=4),
-                mp_drawing.DrawingSpec(color=(170,44,121), thickness=2, circle_radius=2))
-
-            # Left Hand
-            mp_drawing.draw_landmarks(image_gui, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS,
-                mp_drawing.DrawingSpec(color=(78,44,214), thickness=2, circle_radius=4),
-                mp_drawing.DrawingSpec(color=(124,67,32), thickness=2, circle_radius=2))
-
-            # Pose Detections
-            mp_drawing.draw_landmarks(image_gui, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
-                mp_drawing.DrawingSpec(color=(78,44,214), thickness=2, circle_radius=4),
-                mp_drawing.DrawingSpec(color=(124,67,32), thickness=2, circle_radius=2))
-
             # Create a list of detections and a counter that resets every cycle
             detections=[]
 
@@ -117,7 +90,7 @@ def main():
             for bbox in faces: 
                 x1, y1, w, h = bbox
                 # Initializes the Detector
-                if not w*h< 5000:
+                if not w*h< 10000:
                     detection = Detection(x1, y1, w, h, gray, id=detection_counter)
                     detection_counter += 1
                     detections.append(detection)
@@ -135,59 +108,95 @@ def main():
 
             # Loops all the trackers and checks if any of the new detections is associated to the tracker if not update tracker  
             for tracker in trackers: # cycle all trackers
-                # Gets the last detection ID in the tracker
-                last_detection_id = tracker.detections[-1].id
-                # Gets all the IDs of the Detections
-                detection_ids = [d.id for d in detections]
-                # If the last id in the tracker is not one of the new Detection update Tracker
-                if not last_detection_id in detection_ids:
-                    # Update Tracker
-                    tracker.updateTracker(gray)
+                # Checks if the tracker is active so it doesn't use unnecessary processor
+                if tracker.active==True:
+                    # Gets the last detection ID in the tracker
+                    last_detection_id = tracker.detections[-1].id
+                    # Gets all the IDs of the Detections
+                    detection_ids = [d.id for d in detections]
+                    # If the last id in the tracker is not one of the new Detection update Tracker
+                    if not last_detection_id in detection_ids:
+                        # Update Tracker
+                        tracker.updateTracker(gray)
 
 
             # Creates new trackers if the Detection has no tracker associated
             for detection in detections:
-                # Checks to see if the Detections have a tracker associated to them
-                if not detection.assigned_to_tracker:
-                    # Initializes the tracker
-                    tracker = Tracker(detection, id=tracker_counter, image=gray)
-                    tracker_counter += 1
-                    trackers.append(tracker)
-
+                # Checks to see if detection is inside allowed frame so it doesn't create trackers that will be deleted
+                if not detection.x1<border or detection.x2>width-border or detection.y1<border or detection.y2 >height-border:
+                    # Checks to see if the Detections have a tracker associated to them
+                    if not detection.assigned_to_tracker:
+                        # Initializes the tracker
+                        tracker = Tracker(detection, id=tracker_counter, image=gray)
+                        tracker_counter += 1
+                        trackers.append(tracker)
+                        
+            # Loops all the trackers and if they are active do body feature recognition 
             for tracker in trackers:
-                if tracker.name==None and tracker.active:
-                    roi_gray = cv2.resize(tracker.template, training_image_size)
-                    label, confidence = model.predict(roi_gray)
-                    if confidence<60:
-                        engine.say(f"Hello " + str(recognitionModel.names[label]))
-                        engine.runAndWait()
-                        tracker.name=recognitionModel.names[label]
-                        recon=recognition(tracker)
-                        image_gui = recon.draw(image_gui,recognitionModel.names[label],confidence)
-                    else:
-                        unknown_count+=1
-                        unknown_images.append(tracker.template)
-                        stamp_since_last_unknown_image=stamp
-                        if unknown_count>10:
-                            print("What's the person's name: ")
-                            name=input()
-                            print(len(unknown_images))
-                            recognitionModel.save_new_face(unknown_images,name)
-                            unknown_images=[]
-                            unknown_count=0
-                            #Constructs the class for recognition model
-                            recognitionModel =recognition_model(path_to_training_images, training_image_size)
-                            #Trains the model
-                            model.train(recognitionModel.training_images, recognitionModel.training_labels)
-                        cv2.imshow('unknown', tracker.template)
+                if tracker.active== True:
+                    bbox = tracker.bboxes[-1] # get last bbox
+                    tracker_image=image_gui[bbox.y1:bbox.y2,bbox.x1:bbox.x2]
+                    # Converts to RGB for the holistic process
+                    tracker_image = cv2.cvtColor(tracker_image, cv2.COLOR_BGR2RGB)
+                    # Make Detections of the body features
+                    results = holistic.process(tracker_image)                
+                    # Recolor image back to BGR for rendering
+                    tracker_image = cv2.cvtColor(tracker_image, cv2.COLOR_RGB2BGR)
 
-            if stamp-stamp_since_last_unknown_image>15:
-                unknown_images=[]
-                unknown_count=0
+                    mp_drawing.draw_landmarks(tracker_image, results.face_landmarks, mp_holistic.FACEMESH_CONTOURS)
+                    # Right hand
+                    mp_drawing.draw_landmarks(tracker_image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS,
+                        mp_drawing.DrawingSpec(color=(80,22,10), thickness=2, circle_radius=4),
+                        mp_drawing.DrawingSpec(color=(170,44,121), thickness=2, circle_radius=2))
 
-            # ------------------------------------------
-            # Draw stuff
-            # ------------------------------------------
+                    # Left Hand
+                    mp_drawing.draw_landmarks(tracker_image, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS,
+                        mp_drawing.DrawingSpec(color=(78,44,214), thickness=2, circle_radius=4),
+                        mp_drawing.DrawingSpec(color=(124,67,32), thickness=2, circle_radius=2))
+
+                    # Pose Detections
+                    mp_drawing.draw_landmarks(tracker_image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
+                        mp_drawing.DrawingSpec(color=(78,44,214), thickness=2, circle_radius=4),
+                        mp_drawing.DrawingSpec(color=(124,67,32), thickness=2, circle_radius=2))
+                    image_gui[bbox.y1:bbox.y2,bbox.x1:bbox.x2]=tracker_image
+
+            # ######################################
+            # # Face recognition                   #
+            # ######################################
+            # for tracker in trackers:
+            #     if tracker.name==None and tracker.active:
+            #         roi_gray = cv2.resize(tracker.template, training_image_size)
+            #         label, confidence = model.predict(roi_gray)
+            #         if confidence<60:
+            #             engine.say(f"Hello " + str(recognitionModel.names[label]))
+            #             engine.runAndWait()
+            #             tracker.name=recognitionModel.names[label]
+            #             recon=recognition(tracker)
+            #             image_gui = recon.draw(image_gui,recognitionModel.names[label],confidence)
+            #         else:
+            #             unknown_count+=1
+            #             unknown_images.append(tracker.template)
+            #             stamp_since_last_unknown_image=stamp
+            #             if unknown_count>10:
+            #                 print("What's the person's name: ")
+            #                 name=input()
+            #                 print(len(unknown_images))
+            #                 recognitionModel.save_new_face(unknown_images,name)
+            #                 unknown_images=[]
+            #                 unknown_count=0
+            #                 #Constructs the class for recognition model
+            #                 recognitionModel =recognition_model(path_to_training_images, training_image_size)
+            #                 #Trains the model
+            #                 model.train(recognitionModel.training_images, recognitionModel.training_labels)
+            #             cv2.imshow('unknown', tracker.template)
+
+            # if stamp-stamp_since_last_unknown_image>15:
+            #     unknown_images=[]
+            #     unknown_count=0
+
+            ############################################
+            # Draw stuff                               #
+            ############################################
 
             # Draw trackers 
             for tracker in trackers:
@@ -195,8 +204,6 @@ def main():
                 if bbox.x1<border or bbox.x2>width-border or bbox.y1<border or bbox.y2 >height-border:
                     tracker.active=False
                 image_gui = tracker.draw(image_gui)
-                #cv2.imshow('Tracker' +str(tracker.id), tracker.template)
-
 
             # Draw all the detections
             for detection in detections:

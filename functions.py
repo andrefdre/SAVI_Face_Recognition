@@ -152,7 +152,6 @@ class Tracker():
 
          x1,y1,w,h = bbox
          bbox = BoundingBox(int(x1), int(y1), int(w), int(h))
-         #self.template = bbox.extractSmallImage(image_gray)
          # Appends the bbox to be used in the Drawing
          self.bboxes.append(bbox)
 
