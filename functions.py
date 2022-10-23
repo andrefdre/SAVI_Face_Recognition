@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-from cmath import isnan
+import threading
+import pyttsx3
 import os
 import cv2
 import numpy as np
@@ -213,5 +214,17 @@ class recognition():
         image = cv2.putText(image,'Name: ' + str(name),(bbox.x1,bbox.y1-35), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
         image = cv2.putText(image,'Confidence: ' + str(confidence),(bbox.x1,bbox.y1-55), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
         return image
+
+
+class Speak():
+    def __init__(self,text):
+        engine = pyttsx3.init()
+        voices = engine.getProperty('voices')
+        engine.setProperty('voice', voices[1].id)
+        engine.setProperty('rate', 200)
+        engine.say(text)
+        engine.runAndWait()
+        engine.stop()
+    
     
 
