@@ -78,7 +78,7 @@ class Detection(BoundingBox):
         # Stores the id 
         self.id = id
         # Extracts the image inside the detected image
-        self.extracted_face = self.extractSmallImage(image_full)
+        self.extracted_image = self.extractSmallImage(image_full)
         # Initializes the variable that will tell if has a tracker associated
         self.assigned_to_tracker=False
 
@@ -105,6 +105,8 @@ class Tracker():
         self.tracker = tracker_model
         # Template image of the detected face
         self.template = None
+        # Face inside the tracker
+        self.face= None
         # Gives an ID to the tracker
         self.id = id
         # Name of the person
@@ -136,7 +138,7 @@ class Tracker():
         self.tracker.init(image, (detection.x1, detection.y1, detection.w, detection.h))
         #Adds the last detection to the tracker
         self.detections.append(detection)
-        self.template = detection.extracted_face
+        self.template = detection.extracted_image
         #Sets the detection to have a tracker assigned
         detection.assigned_to_tracker = True
         bbox = BoundingBox(detection.x1, detection.y1, detection.w, detection.h)

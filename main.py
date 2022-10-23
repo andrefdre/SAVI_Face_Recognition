@@ -11,7 +11,8 @@ from functions import Detection , Tracker ,recognition_model,recognition
 
 def main():
     # Load the cascade model for detection
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades +'haarcascade_upperbody.xml')
+    body_cascade = cv2.CascadeClassifier(cv2.data.haarcascades +'haarcascade_upperbody.xml')
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades +'haarcascade_frontalface_alt.xml')
 
     # Recognition Model
     model = cv2.face.LBPHFaceRecognizer_create()
@@ -20,6 +21,7 @@ def main():
     tracker_counter = 0
     trackers = []
     detection_counter = 0
+    face_detection_counter=0
     # Threshold for the relation of the detection and tracker
     iou_threshold = 0.9
     border=5
@@ -83,11 +85,11 @@ def main():
             # Create a list of detections and a counter that resets every cycle
             detections=[]
 
-            # Detect the faces
-            faces = face_cascade.detectMultiScale(gray,scaleFactor = 1.1, minNeighbors = 4)
+            # Detect the bodies
+            bodies = body_cascade.detectMultiScale(gray,scaleFactor = 1.1, minNeighbors = 4)
 
-            # Loops all the detected faces and Creates a detection and adds it to detection array
-            for bbox in faces: 
+            # Loops all the detected bodies and Creates a detection and adds it to detection array
+            for bbox in bodies: 
                 x1, y1, w, h = bbox
                 # Initializes the Detector
                 if not w*h< 10000:
@@ -130,7 +132,7 @@ def main():
                         tracker = Tracker(detection, id=tracker_counter, image=gray)
                         tracker_counter += 1
                         trackers.append(tracker)
-                        
+
             # Loops all the trackers and if they are active do body feature recognition 
             for tracker in trackers:
                 if tracker.active== True:
@@ -160,39 +162,55 @@ def main():
                         mp_drawing.DrawingSpec(color=(124,67,32), thickness=2, circle_radius=2))
                     image_gui[bbox.y1:bbox.y2,bbox.x1:bbox.x2]=tracker_image
 
-            # ######################################
-            # # Face recognition                   #
-            # ######################################
-            # for tracker in trackers:
-            #     if tracker.name==None and tracker.active:
-            #         roi_gray = cv2.resize(tracker.template, training_image_size)
-            #         label, confidence = model.predict(roi_gray)
-            #         if confidence<60:
-            #             engine.say(f"Hello " + str(recognitionModel.names[label]))
-            #             engine.runAndWait()
-            #             tracker.name=recognitionModel.names[label]
-            #             recon=recognition(tracker)
-            #             image_gui = recon.draw(image_gui,recognitionModel.names[label],confidence)
-            #         else:
-            #             unknown_count+=1
-            #             unknown_images.append(tracker.template)
-            #             stamp_since_last_unknown_image=stamp
-            #             if unknown_count>10:
-            #                 print("What's the person's name: ")
-            #                 name=input()
-            #                 print(len(unknown_images))
-            #                 recognitionModel.save_new_face(unknown_images,name)
-            #                 unknown_images=[]
-            #                 unknown_count=0
-            #                 #Constructs the class for recognition model
-            #                 recognitionModel =recognition_model(path_to_training_images, training_image_size)
-            #                 #Trains the model
-            #                 model.train(recognitionModel.training_images, recognitionModel.training_labels)
-            #             cv2.imshow('unknown', tracker.template)
+            face_detections=[]
+            for tracker in trackers:
+                if tracker.active==True:
+                    # Detect the faces
+                    faces = face_cascade.detectMultiScale(gray,scaleFactor = 1.1, minNeighbors = 4)
+                     # Loops all the detected faces and Creates a detection and adds it to detection array
+                    for bbox in faces: 
+                        x1, y1, w, h = bbox
+                        # Initializes the Detector
+                        if not w*h< 5000:
+                            face_detection = Detection(x1, y1, w, h, gray, id=detection_counter)
+                            face_detection_counter += 1
+                            face_detections.append(face_detection)
+                            tracker.face=face_detection.extracted_image
 
-            # if stamp-stamp_since_last_unknown_image>15:
-            #     unknown_images=[]
-            #     unknown_count=0
+            ######################################
+            # Face recognition                   #
+            ######################################
+            for tracker in trackers:
+                if tracker.name==None and tracker.active:
+                    if not tracker.face is None:
+                        roi_gray = cv2.resize(tracker.face, training_image_size)
+                        label, confidence = model.predict(roi_gray)
+                        if confidence<60:
+                            engine.say(f"Hello " + str(recognitionModel.names[label]))
+                            engine.runAndWait()
+                            tracker.name=recognitionModel.names[label]
+                            recon=recognition(tracker)
+                            image_gui = recon.draw(image_gui,recognitionModel.names[label],confidence)
+                        else:
+                            unknown_count+=1
+                            unknown_images.append(tracker.face)
+                            stamp_since_last_unknown_image=stamp
+                            if unknown_count>10:
+                                print("What's the person's name: ")
+                                name=input()
+                                print(len(unknown_images))
+                                recognitionModel.save_new_face(unknown_images,name)
+                                unknown_images=[]
+                                unknown_count=0
+                                #Constructs the class for recognition model
+                                recognitionModel =recognition_model(path_to_training_images, training_image_size)
+                                #Trains the model
+                                model.train(recognitionModel.training_images, recognitionModel.training_labels)
+                            cv2.imshow('unknown', tracker.face)
+
+            if stamp-stamp_since_last_unknown_image>15:
+                unknown_images=[]
+                unknown_count=0
 
             ############################################
             # Draw stuff                               #
@@ -208,6 +226,10 @@ def main():
             # Draw all the detections
             for detection in detections:
                 image_gui = detection.draw(image_gui)
+
+            # Draw all the faces detected
+            for face_detection in face_detections:
+                image_gui = face_detection.draw(image_gui)
 
             # Display the results
             cv2.imshow('img', image_gui)
