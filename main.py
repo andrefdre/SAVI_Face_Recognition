@@ -63,7 +63,7 @@ def main():
             # Read the frame
             ret, img = cap.read()
 
-            height,width,channels = img.shape
+            height,width,_ = img.shape
 
             #If the frame is invalid break the cycle
             if ret == False:
