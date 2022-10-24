@@ -4,6 +4,7 @@ import pyttsx3
 import os
 import cv2
 import numpy as np
+from turtle import color
 
 ###################################
 # Bounding Box Class              #
@@ -47,7 +48,7 @@ class BoundingBox:
 ###########################################
 class Detection(BoundingBox):
     # Function that will initialize the Detector
-    def __init__(self, x1, y1, w, h , image_full, id ):
+    def __init__(self, x1, y1, w, h , image_full, stamp,id):
         # Calls the super class constructor
         super().__init__(x1,y1,w,h)
         # Stores the id 
@@ -56,6 +57,7 @@ class Detection(BoundingBox):
         self.extracted_image = self.extractSmallImage(image_full)
         # Initializes the variable that will tell if has a tracker associated
         self.assigned_to_tracker=False
+        self.stamp=stamp
 
     # Function that will draw the detection
     def draw(self, image_gui, color=(255,0,0)):
@@ -161,6 +163,15 @@ class Tracker():
         for detection in self.detections:
             text += str(detection.id) + ', '
         return text
+
+    def updateTime(self, stamp):
+        self.time_since_last_detection = round(stamp-self.getLastDetectionStamp(),1)
+
+        if self.time_since_last_detection > 2: # deactivate tracker        
+            self.active = False
+
+    def getLastDetectionStamp(self):
+        return self.detections[-1].stamp
 
 #########################################
 # Recognition Class                     #
