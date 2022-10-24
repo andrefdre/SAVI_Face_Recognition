@@ -9,7 +9,6 @@ import numpy as np
 from copy import deepcopy
 from functions import Detection, Detection_face , Tracker ,recognition_model,recognition, Speak
 from detector import Detector
-#from lib import VisTrack, show_video, create_video
 
 def main():
     # Load the body detector
@@ -43,7 +42,7 @@ def main():
     # Threshold for the relation of the detection and tracker
     iou_threshold = 0.9
     border=30
-    disabling_offset=20
+    disabling_offset=10
     # Tell general information for recognition functions
     path_to_training_images= '../data/at'
     training_image_size= (200, 200)
@@ -53,7 +52,8 @@ def main():
     #Constructs the class for recognition model
     recognitionModel =recognition_model(path_to_training_images, training_image_size)
     #Trains the model
-    model.train(recognitionModel.training_images, recognitionModel.training_labels)
+    if len(recognitionModel.training_labels)>0:
+        model.train(recognitionModel.training_images, recognitionModel.training_labels)
 
     # Capture the video from webcam
     cap = cv2.VideoCapture(0)
@@ -116,21 +116,27 @@ def main():
                     # Computes the overlap of both bboxes
                     iou = detection.computeIOU(tracker_bbox)
                     # If both bboxes overlap add the detection to the tracker
-                    #print('IOU( T' + str(tracker.id) + ' D' + str(detection.id) + ' ) = ' + str(iou))
-                    if iou > iou_threshold: 
+                    if iou > iou_threshold and tracker.active: 
                         # Associate detection with tracker 
                         tracker.addDetection(detection, image_gray)
 
             ##############################################
             # Does all the processing to each tracker    #
             ##############################################
-
             for tracker in trackers: # cycle all trackers
-                last_detection_id = tracker.detections[-1].id
-                detection_ids = [d.id for d in detections]
-                if not last_detection_id in detection_ids:
-                    #print('Tracker ' + str(tracker.id) + ' Doing some tracking')
-                    tracker.updateTracker(image_gray)
+                if tracker.active:
+                    last_detection_id = tracker.detections[-1].id
+                    detection_ids = [d.id for d in detections]
+                    if not last_detection_id in detection_ids:
+                        tracker.updateTracker(image_gray)
+
+            # Creates new trackers if the Detection has no tracker associated
+            for detection in detections:
+                if  detection.x1>border-disabling_offset or detection.x2<width-border+disabling_offset or detection.y1>border-disabling_offset:
+                    if not detection.assigned_to_tracker:
+                        tracker = Tracker(detection, id=tracker_counter, image=image_gray)
+                        tracker_counter += 1
+                        trackers.append(tracker)
 
             ###################################
             # Body Recognition                #
@@ -140,8 +146,9 @@ def main():
                 if tracker.active==True:
                     bbox = tracker.bboxes[-1] # get last bbox
                     # If the tracker center is outside the border set's it to deactivated
-                    # if bbox.x1+disabling_offset<border or bbox.x2-disabling_offset>width-border or bbox.y1+disabling_offset <border:
-                    #     tracker.active=False
+                    if bbox.x1<border-disabling_offset or bbox.x2>width-border+disabling_offset or bbox.y1<border-disabling_offset:
+                         tracker.active=False
+
                     tracker_image=image_gui[int(bbox.y1):int(bbox.y2),int(bbox.x1):int(bbox.x2),:]
                     if tracker_image.shape[0]>0 and tracker_image.shape[1]>0:
                         # Converts to RGB for the holistic process
@@ -186,14 +193,6 @@ def main():
                             face_detection_counter += 1
                             face_detections.append(face_detection)
                             tracker.face=face_detection.extracted_image
-
-
-            # Creates new trackers if the Detection has no tracker associated
-            for detection in detections:
-                if not detection.assigned_to_tracker:
-                    tracker = Tracker(detection, id=tracker_counter, image=image_gray)
-                    tracker_counter += 1
-                    trackers.append(tracker)
                     
 
             ######################################
@@ -203,7 +202,11 @@ def main():
                 if tracker.name==None and tracker.active:
                     if not tracker.face is None:
                         roi_gray = cv2.resize(tracker.face, training_image_size)
-                        label, confidence = model.predict(roi_gray)
+                        if len(recognitionModel.training_labels)>0:
+                            label, confidence = model.predict(roi_gray)
+                        else:
+                            confidence=10000
+
                         if confidence<60:
                             text = f"Hello " + str(recognitionModel.names[label])
                             threading.Thread(target=Speak, args=(text,)).start()
@@ -242,9 +245,9 @@ def main():
             for detection in detections:
                 image_gui = detection.draw(image_gui)
 
-            # # Draw all the faces detected
-            # for face_detection in face_detections:
-            #     image_gui = face_detection.draw(image_gui)
+            # Draw all the faces detected
+            for face_detection in face_detections:
+                image_gui = face_detection.draw(image_gui)
 
             # Display the results
             cv2.imshow('img', image_gui)
