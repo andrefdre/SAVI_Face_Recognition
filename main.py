@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 # Import all the libraries required
-from fileinput import hook_encoded
 import mediapipe as mp
 import threading
 import pyttsx3
@@ -9,10 +8,28 @@ import cv2
 import numpy as np
 from copy import deepcopy
 from functions import Detection, Detection_face , Tracker ,recognition_model,recognition, Speak
+from detector import Detector
+#from lib import VisTrack, show_video, create_video
 
 def main():
+    # Load the body detector
+    model_path = 'model/model.tflite'
+    input_shape = [192,192]
+    score_th = 0.4
+    nms_th = 0.5
+    num_threads = None
+
+    # Initializes the model detector class
+    detector = Detector(
+    model_path=model_path,
+    input_shape=input_shape,
+    score_th=score_th,
+    nms_th=nms_th,
+    providers=['CPUExecutionProvider'],
+    num_threads=num_threads,
+    )
+
     # Load the cascade model for detection
-    body_cascade = cv2.CascadeClassifier(cv2.data.haarcascades +'haarcascade_upperbody.xml')
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades +'haarcascade_frontalface_alt.xml')
 
     # Recognition Model
@@ -25,7 +42,8 @@ def main():
     face_detection_counter=0
     # Threshold for the relation of the detection and tracker
     iou_threshold = 0.9
-    border=25
+    border=30
+    disabling_offset=20
     # Tell general information for recognition functions
     path_to_training_images= '../data/at'
     training_image_size= (200, 200)
@@ -73,21 +91,23 @@ def main():
             image_gui=image_darkned
 
             # Detect the bodies
-            bodies = body_cascade.detectMultiScale(gray,scaleFactor = 1.1, minNeighbors = 4,minSize = (100, 100))
-
+            bboxes, scores, class_ids = detector.inference(img)
             # Create a list of detections and a counter that resets every cycle
             detections=[]
             # Loops all the detected bodies and Creates a detection and adds it to detection array
-            for bbox in bodies: 
-                x1, y1, w, h = bbox
-                # Initializes the Detector
-                if not w*h< 20000:
-                    # Initializes the class detection
-                    detection = Detection(x1, y1, w, h, gray, id=detection_counter)
-                    # Increases the detection counter
-                    detection_counter += 1
-                    # Adds the detection to the array
-                    detections.append(detection)
+            for idx , bbox in enumerate(bboxes):
+                if(scores[idx]>0.8): 
+                    x1, y1, x2, y2 = int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])
+                    w=x2-x1
+                    h=y2-y1
+                    # Initializes the Detector
+                    if not w*h< 20000:
+                        # Initializes the class detection
+                        detection = Detection(x1, y1, w, h, gray, id=detection_counter)
+                        # Increases the detection counter
+                        detection_counter += 1
+                        # Adds the detection to the array
+                        detections.append(detection)
 
             # Loops all the detections and loops all the trackers and computes if they overlap and if they do add the new detection to the tracker
             for detection in detections: # cycle all detections
@@ -96,18 +116,18 @@ def main():
                     tracker_bbox = tracker.detections[-1]
                     # Computes the overlap of both bboxes
                     iou = detection.computeIOU(tracker_bbox)
+                    print(iou)
                     # If both bboxes overlap add the detection to the tracker
                     if iou > iou_threshold and tracker.active: 
                         # Associate detection with tracker 
                         tracker.addDetection(detection, gray)
 
-            # Loops all the trackers and checks if any of the new detections is associated to the tracker if not update tracker  
+            ##############################################
+            # Does all the processing to each tracker    #
+            ##############################################
+
             for tracker in trackers: # cycle all trackers
-                # Gets the last bbox in the tracker
-                bbox = tracker.bboxes[-1]
-                # If the tracker center is outside the border set's it to deactivated
-                if (bbox.x1+bbox.x2)/2<border or (bbox.x1+bbox.x2)/2>width-border or (bbox.y1+bbox.y2)/2<border or (bbox.y1+bbox.y2)/2 >height-border:
-                    tracker.active=False
+                # Will check if the tracker overlaps with the detection and if so add detection otherwise do tracking
                 # Checks if the tracker is active so it doesn't use unnecessary processor
                 if tracker.active==True:
                     # Gets the last detection ID in the tracker
@@ -119,23 +139,17 @@ def main():
                         # Update Tracker
                         tracker.updateTracker(gray)
 
-
-            # Creates new trackers if the Detection has no tracker associated
-            for detection in detections:
-                # Checks to see if detection is inside allowed frame so it doesn't create trackers that will be deleted
-                if not (detection.x1+detection.x2)/2<border or (detection.x1+detection.x2)/2>width-border or (detection.y1+detection.y2)/2<border or (detection.y1+detection.y2)/2 >height-border:
-                    # Checks to see if the Detections have a tracker associated to them
-                    if not detection.assigned_to_tracker:
-                        # Initializes the tracker
-                        tracker = Tracker(detection, tracker_counter, gray)
-                        tracker_counter += 1
-                        trackers.append(tracker)
-
+            ###################################
+            # Body Recognition                #
+            ###################################
             # Loops all the trackers and if they are active do body feature recognition 
-            for tracker in trackers:
-                if tracker.active== True:
+            for tracker in trackers: # cycle all trackers
+                if tracker.active==True:
                     bbox = tracker.bboxes[-1] # get last bbox
-                    tracker_image=image_gui[bbox.y1:bbox.y2,bbox.x1:bbox.x2,:]
+                    # If the tracker center is outside the border set's it to deactivated
+                    if bbox.x1+disabling_offset<border or bbox.x2-disabling_offset>width-border or bbox.y1+disabling_offset <border:
+                        tracker.active=False
+                    tracker_image=image_gui[int(bbox.y1):int(bbox.y2),int(bbox.x1):int(bbox.x2),:]
                     if tracker_image.shape[0]>0 and tracker_image.shape[1]>0:
                         # Converts to RGB for the holistic process
                         tracker_image = cv2.cvtColor(tracker_image, cv2.COLOR_BGR2RGB)
@@ -159,13 +173,13 @@ def main():
                         mp_drawing.draw_landmarks(tracker_image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
                             mp_drawing.DrawingSpec(color=(78,44,214), thickness=2, circle_radius=4),
                             mp_drawing.DrawingSpec(color=(124,67,32), thickness=2, circle_radius=2))
-                        image_gui[bbox.y1:bbox.y2,bbox.x1:bbox.x2,:]=tracker_image
+                        image_gui[int(bbox.y1):int(bbox.y2),int(bbox.x1):int(bbox.x2),:]=tracker_image
 
             #######################################
             # Face Detection                      #
             #######################################
             face_detections=[]
-            for tracker in trackers:
+            for tracker in trackers: # cycle all trackers
                 if tracker.active==True:
                     # Detect the faces
                     faces = face_cascade.detectMultiScale(tracker.template,scaleFactor = 1.1, minNeighbors = 4)
@@ -179,7 +193,19 @@ def main():
                             face_detection_counter += 1
                             face_detections.append(face_detection)
                             tracker.face=face_detection.extracted_image
-                            cv2.imshow("face",tracker.face)
+
+
+            # Creates new trackers if the Detection has no tracker associated
+            for detection in detections:
+                # Checks to see if detection is inside allowed frame so it doesn't create trackers that will be deleted
+                if not detection.x1+disabling_offset<border or detection.x2-disabling_offset>width-border or detection.y1 + disabling_offset <border:
+                    # Checks to see if the Detections have a tracker associated to them
+                    if not detection.assigned_to_tracker:
+                    # Initializes the tracker
+                        tracker = Tracker(detection, tracker_counter, gray)
+                        tracker_counter += 1
+                        trackers.append(tracker)
+                    
 
             ######################################
             # Face recognition                   #
@@ -199,7 +225,7 @@ def main():
                             unknown_count+=1
                             unknown_images.append(tracker.face)
                             stamp_since_last_unknown_image=stamp
-                            if unknown_count>10:
+                            if unknown_count>20:
                                 print("What's the person's name: ")
                                 name=input()
                                 recognitionModel.save_new_face(unknown_images,name)
