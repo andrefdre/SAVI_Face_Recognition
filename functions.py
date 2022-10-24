@@ -9,7 +9,7 @@ import numpy as np
 # Tracker Models                            #
 #############################################
 tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
-tracker_type = tracker_types[7]
+tracker_type = tracker_types[1]
 
 if tracker_type == 'BOOSTING':
     tracker_model = cv2.TrackerBoosting_create()
@@ -173,7 +173,7 @@ class Tracker():
         ret, bbox = self.tracker.update(image_gray)
         # Creates a new Bounding Box since the bbox given by the tracker as a different construction than what we use
         x1,y1,w,h = bbox
-        bbox = BoundingBox(x1, y1, w, h)
+        bbox = BoundingBox(int(x1), int(y1), int(w), int(h))
         # Appends the bbox to be used in the Drawing
         self.bboxes.append(bbox)
         # Update template using new bbox coordinates
