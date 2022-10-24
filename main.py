@@ -127,7 +127,7 @@ def main():
                     # Checks to see if the Detections have a tracker associated to them
                     if not detection.assigned_to_tracker:
                         # Initializes the tracker
-                        tracker = Tracker(detection, id=tracker_counter, image=gray)
+                        tracker = Tracker(detection, tracker_counter, gray)
                         tracker_counter += 1
                         trackers.append(tracker)
 
