@@ -73,7 +73,7 @@ def main():
             image_gui=image_darkned
 
             # Detect the bodies
-            bodies = body_cascade.detectMultiScale(gray,scaleFactor = 1.1, minNeighbors = 4)
+            bodies = body_cascade.detectMultiScale(gray,scaleFactor = 1.1, minNeighbors = 4,minSize = (100, 100))
 
             # Create a list of detections and a counter that resets every cycle
             detections=[]
