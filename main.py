@@ -102,7 +102,7 @@ def main():
                 # Initializes the Detector
                 if not w*h< 20000:
                     # Initializes the class detection
-                    detection = Detection(x1, y1, w, h, image_gray, id=detection_counter)
+                    detection = Detection(x1, y1, w, h, image_gray, stamp,id=detection_counter)
                     # Increases the detection counter
                     detection_counter += 1
                     # Adds the detection to the array
@@ -232,6 +232,12 @@ def main():
             if stamp-stamp_since_last_unknown_image>15:
                 unknown_images=[]
                 unknown_count=0
+            
+            # ------------------------------------------
+            # Deactivate Tracker if no detection for more than T (TIMEOUT)
+            # ------------------------------------------
+            for tracker in trackers: # cycle all trackers
+                tracker.updateTime(stamp)
 
             ############################################
             # Draw stuff                               #
