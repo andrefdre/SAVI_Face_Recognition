@@ -72,7 +72,7 @@ class BoundingBox:
 ###########################################
 class Detection(BoundingBox):
     # Function that will initialize the Detector
-    def __init__(self, x1, y1, w, h, image_full, id):
+    def __init__(self, x1, y1, w, h , image_full, id ):
         # Calls the super class constructor
         super().__init__(x1,y1,w,h)
         # Stores the id 
@@ -88,6 +88,30 @@ class Detection(BoundingBox):
         image_gui = cv2.rectangle(image_gui,(self.x1,self.y1),(self.x2, self.y2),color,3)
         # Writes some information about the detection
         image_gui = cv2.putText(image_gui, 'D' + str(self.id), (self.x1, self.y1-5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA)
+        # Returns the image to be shown
+        return image_gui
+
+###########################################
+# Detector Class                          #
+###########################################
+class Detection_face(BoundingBox):
+    # Function that will initialize the Detector
+    def __init__(self, x1, y1, w, h , bbox_tracker , image_full, id ):
+        # Calls the super class constructor
+        super().__init__(x1,y1,w,h)
+        # Stores the id 
+        self.id = id
+        # Extracts the image inside the detected image
+        self.extracted_image = self.extractSmallImage(image_full)
+        # Stores the Bounding Box of the tracker so it draws in the correct position
+        self.bbox_tracker=bbox_tracker
+
+    # Function that will draw the detection
+    def draw(self, image_gui, color=(255,0,0)):
+        # Draws the rectangle around the detected part of the image
+        image_gui = cv2.rectangle(image_gui,(self.x1+self.bbox_tracker.x1,self.y1+self.bbox_tracker.y1),(self.x2+self.bbox_tracker.x1, self.y2+self.bbox_tracker.y1),color,3)
+        # Writes some information about the detection
+        image_gui = cv2.putText(image_gui, 'D' + str(self.id), (self.x1+self.bbox_tracker.x1, self.y1+self.bbox_tracker.y1-5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA)
         # Returns the image to be shown
         return image_gui
 

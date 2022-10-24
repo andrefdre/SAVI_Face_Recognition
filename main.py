@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
 # Import all the libraries required
+from fileinput import hook_encoded
 import mediapipe as mp
 import threading
 import pyttsx3
 import cv2
 import numpy as np
 from copy import deepcopy
-from functions import Detection , Tracker ,recognition_model,recognition, Speak
+from functions import Detection, Detection_face , Tracker ,recognition_model,recognition, Speak
 
 def main():
     # Load the cascade model for detection
@@ -167,16 +168,18 @@ def main():
             for tracker in trackers:
                 if tracker.active==True:
                     # Detect the faces
-                    faces = face_cascade.detectMultiScale(gray,scaleFactor = 1.1, minNeighbors = 4)
+                    faces = face_cascade.detectMultiScale(tracker.template,scaleFactor = 1.1, minNeighbors = 4)
                     # Loops all the detected faces and Creates a detection and adds it to detection array
                     for bbox in faces: 
                         x1, y1, w, h = bbox
+                        bbox_tracker=tracker.bboxes[-1]
                         # Initializes the Detector
                         if not w*h< 5000:
-                            face_detection = Detection(x1, y1, w, h, gray, id=face_detection_counter)
+                            face_detection = Detection_face(x1, y1, w, h ,bbox_tracker , tracker.template, id=face_detection_counter)
                             face_detection_counter += 1
                             face_detections.append(face_detection)
                             tracker.face=face_detection.extracted_image
+                            cv2.imshow("face",tracker.face)
 
             ######################################
             # Face recognition                   #
