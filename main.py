@@ -193,6 +193,7 @@ def main():
                             face_detection_counter += 1
                             face_detections.append(face_detection)
                             tracker.face=face_detection.extracted_image
+    
                     
 
             ######################################
