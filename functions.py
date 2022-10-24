@@ -4,29 +4,32 @@ import pyttsx3
 import os
 import cv2
 import numpy as np
+from gtts import gTTS
+from playsound import playsound
 
 #############################################
 # Tracker Models                            #
 #############################################
-tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
-tracker_type = tracker_types[1]
 
-if tracker_type == 'BOOSTING':
-    tracker_model = cv2.TrackerBoosting_create()
-if tracker_type == 'MIL':
-    tracker_model = cv2.TrackerMIL_create() 
-if tracker_type == 'KCF':
-    tracker_model = cv2.TrackerKCF_create() 
-if tracker_type == 'TLD':
-    tracker_model = cv2.TrackerTLD_create() 
-if tracker_type == 'MEDIANFLOW':
-    tracker_model = cv2.TrackerMedianFlow_create() 
-if tracker_type == 'GOTURN':
-    tracker_model = cv2.TrackerGOTURN_create()
-if tracker_type == 'MOSSE':
-    tracker_model = cv2.TrackerMOSSE_create()
-if tracker_type == "CSRT":
-    tracker_model = cv2.TrackerCSRT_create()
+# tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
+# tracker_type = tracker_types[1]
+
+# if tracker_type == 'BOOSTING':
+#     tracker_model = cv2.TrackerBoosting_create()
+# if tracker_type == 'MIL':
+#     tracker_model = cv2.TrackerMIL_create() 
+# if tracker_type == 'KCF':
+#     tracker_model = cv2.TrackerKCF_create() 
+# if tracker_type == 'TLD':
+#     tracker_model = cv2.TrackerTLD_create() 
+# if tracker_type == 'MEDIANFLOW':
+#     tracker_model = cv2.TrackerMedianFlow_create() 
+# if tracker_type == 'GOTURN':
+#     tracker_model = cv2.TrackerGOTURN_create()
+# if tracker_type == 'MOSSE':
+#     tracker_model = cv2.TrackerMOSSE_create()
+# if tracker_type == "CSRT":
+#     tracker_model = cv2.TrackerCSRT_create()
 
 ###################################
 # Bounding Box Class              #
@@ -125,7 +128,8 @@ class Tracker():
         # Creates an array of Bounding boxes to later draw them
         self.bboxes = []
         # Initializes the tracker model
-        self.tracker = tracker_model
+        self.tracker = cv2.TrackerKCF_create() 
+# if tracker_type == 'TLD':
         # Template image of the detected face
         self.template = None
         # Face inside the tracker
@@ -156,7 +160,7 @@ class Tracker():
         return image_gui
 
     # Function that will add a Detection to the tracker so it can be later used to update itself
-    def addDetection(self, detection,image):
+    def addDetection(self, detection, image):
         #Initializes the tracker
         self.tracker.init(image, (detection.x1, detection.y1, detection.w, detection.h))
         #Adds the last detection to the tracker
@@ -240,15 +244,20 @@ class recognition():
 # Speak Class                    #
 ##################################
 
+# class Speak():
+#     def __init__(self,text):
+#         engine = pyttsx3.init()
+#         voices = engine.getProperty('voices')
+#         engine.setProperty('voice', voices[1].id)
+#         engine.setProperty('rate', 200)
+#         engine.say(text)
+#         engine.runAndWait()
+#         engine.stop()
+    
+    
 class Speak():
     def __init__(self,text):
-        engine = pyttsx3.init()
-        voices = engine.getProperty('voices')
-        engine.setProperty('voice', voices[1].id)
-        engine.setProperty('rate', 200)
-        engine.say(text)
-        engine.runAndWait()
-        engine.stop()
-    
-    
-
+        self.text = text
+        tts = gTTS(text, lang = 'pt')
+        tts.save("./hi.mp3")
+        playsound('./hi.mp3')
