@@ -40,9 +40,6 @@ def main():
     # Capture the video from webcam
     cap = cv2.VideoCapture(0)
 
-    #Text to speech
-    engine = pyttsx3.init()
-
     # Body Recognition
     mp_drawing = mp.solutions.drawing_utils
     mp_holistic = mp.solutions.holistic
@@ -240,7 +237,6 @@ def main():
         # Release the VideoCapture object
         cap.release()
         cv2.destroyAllWindows()
-        engine.stop()
 
 
 if __name__ == '__main__':
