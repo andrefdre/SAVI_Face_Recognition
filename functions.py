@@ -1,32 +1,11 @@
 #!/usr/bin/env python3
 
-import pyttsx3
+from gtts import gTTS
+from playsound import playsound
 import os
 import cv2
 import numpy as np
-
-#############################################
-# Tracker Models                            #
-#############################################
-tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
-tracker_type = tracker_types[2]
-
-if tracker_type == 'BOOSTING':
-    tracker_model = cv2.TrackerBoosting_create()
-if tracker_type == 'MIL':
-    tracker_model = cv2.TrackerMIL_create() 
-if tracker_type == 'KCF':
-    tracker_model = cv2.TrackerKCF_create() 
-if tracker_type == 'TLD':
-    tracker_model = cv2.TrackerTLD_create() 
-if tracker_type == 'MEDIANFLOW':
-    tracker_model = cv2.TrackerMedianFlow_create() 
-if tracker_type == 'GOTURN':
-    tracker_model = cv2.TrackerGOTURN_create()
-if tracker_type == 'MOSSE':
-    tracker_model = cv2.TrackerMOSSE_create()
-if tracker_type == "CSRT":
-    tracker_model = cv2.TrackerCSRT_create()
+from turtle import color
 
 ###################################
 # Bounding Box Class              #
@@ -47,19 +26,17 @@ class BoundingBox:
 
     # Function that will compute the intersection of both bboxes
     def computeIOU(self, bbox2):
-        # Gets the coordinates of the intersected rectangle
         x1_intr = min(self.x1, bbox2.x1)             
         y1_intr = min(self.y1, bbox2.y1)             
         x2_intr = max(self.x2, bbox2.x2)
         y2_intr = max(self.y2, bbox2.y2)
-        # Gets the width height and area of the intersected rectangle
+
         w_intr = x2_intr - x1_intr
         h_intr = y2_intr - y1_intr
         A_intr = w_intr * h_intr
-        # Calculates all the area of box boxes
+
         A_union = self.area + bbox2.area - A_intr
-    
-        # Returns the probability of being intersected
+        
         return A_intr / A_union
 
     # Function that will extract the image inside the bounding box
@@ -72,7 +49,7 @@ class BoundingBox:
 ###########################################
 class Detection(BoundingBox):
     # Function that will initialize the Detector
-    def __init__(self, x1, y1, w, h , image_full, id ):
+    def __init__(self, x1, y1, w, h , image_full, stamp,id):
         # Calls the super class constructor
         super().__init__(x1,y1,w,h)
         # Stores the id 
@@ -81,6 +58,7 @@ class Detection(BoundingBox):
         self.extracted_image = self.extractSmallImage(image_full)
         # Initializes the variable that will tell if has a tracker associated
         self.assigned_to_tracker=False
+        self.stamp=stamp
 
     # Function that will draw the detection
     def draw(self, image_gui, color=(255,0,0)):
@@ -90,6 +68,7 @@ class Detection(BoundingBox):
         image_gui = cv2.putText(image_gui, 'D' + str(self.id), (self.x1, self.y1-5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA)
         # Returns the image to be shown
         return image_gui
+
 
 ###########################################
 # Detector Class                          #
@@ -122,11 +101,11 @@ class Tracker():
     # Function that initializes the Tracker
     def __init__(self, detection, id,image):
         # Creates an array to keep tracking of all the detections
-        self.detections = [detection]
+        self.detections = []
         # Creates an array of Bounding boxes to later draw them
         self.bboxes = []
         # Initializes the tracker model
-        self.tracker = tracker_model
+        self.tracker = cv2.TrackerCSRT_create()
         # Template image of the detected face
         self.template = None
         # Face inside the tracker
@@ -171,21 +150,29 @@ class Tracker():
     # Function that will update the tracker if no detection is associated to the tracker
     def updateTracker(self,image_gray):
         # Calls the tracker model to update the tracer
-         ret, bbox = self.tracker.update(image_gray)
-         # Creates a new Bounding Box since the bbox given by the tracker as a different construction than what we use
-         if not ret:
-            self.active=False
-
-         x1,y1,w,h = bbox
-         bbox = BoundingBox(int(x1), int(y1), int(w), int(h))
-         # Appends the bbox to be used in the Drawing
-         self.bboxes.append(bbox)
+        ret, bbox = self.tracker.update(image_gray)
+        # Creates a new Bounding Box since the bbox given by the tracker as a different construction than what we use
+        x1,y1,w,h = bbox
+        bbox = BoundingBox(int(x1), int(y1), int(w), int(h))
+        # Appends the bbox to be used in the Drawing
+        self.bboxes.append(bbox)
+        # Update template using new bbox coordinates
+        self.template = bbox.extractSmallImage(image_gray)
 
     def __str__(self):
         text =  'T' + str(self.id) + ' Detections = ['
         for detection in self.detections:
             text += str(detection.id) + ', '
         return text
+
+    def updateTime(self, stamp):
+        self.time_since_last_detection = round(stamp-self.getLastDetectionStamp(),1)
+
+        if self.time_since_last_detection > 2: # deactivate tracker        
+            self.active = False
+
+    def getLastDetectionStamp(self):
+        return self.detections[-1].stamp
 
 #########################################
 # Recognition Class                     #
@@ -238,16 +225,16 @@ class recognition():
         image = cv2.putText(image,'Confidence: ' + str(confidence),(bbox.x1,bbox.y1-55), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
         return image
 
+##################################
+# Speak Class                    #
+##################################
 
 class Speak():
     def __init__(self,text):
-        engine = pyttsx3.init()
-        voices = engine.getProperty('voices')
-        engine.setProperty('voice', voices[1].id)
-        engine.setProperty('rate', 200)
-        engine.say(text)
-        engine.runAndWait()
-        engine.stop()
+        self.text = text
+        tts = gTTS(text, lang = 'pt')
+        tts.save("./hi.mp3")
+        playsound('./hi.mp3')
     
     
 
