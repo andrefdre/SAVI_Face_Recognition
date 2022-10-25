@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import pyttsx3
+from gtts import gTTS
+from playsound import playsound
 import os
 import cv2
 import numpy as np
@@ -230,13 +231,10 @@ class recognition():
 
 class Speak():
     def __init__(self,text):
-        engine = pyttsx3.init()
-        voices = engine.getProperty('voices')
-        engine.setProperty('voice', voices[1].id)
-        engine.setProperty('rate', 200)
-        engine.say(text)
-        engine.runAndWait()
-        engine.stop()
+        self.text = text
+        tts = gTTS(text, lang = 'pt')
+        tts.save("./hi.mp3")
+        playsound('./hi.mp3')
     
     
 

@@ -209,7 +209,7 @@ def main():
                             confidence=10000
 
                         if confidence<60:
-                            text = f"Hello " + str(recognitionModel.names[label])
+                            text = f"Olá " + str(recognitionModel.names[label])
                             threading.Thread(target=Speak, args=(text,)).start()
                             tracker.name=recognitionModel.names[label]
                             recon=recognition(tracker)
