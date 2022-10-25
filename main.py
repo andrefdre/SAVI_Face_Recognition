@@ -51,6 +51,10 @@ def main():
     stamp_since_last_unknown_image=0
     #Constructs the class for recognition model
     recognitionModel =recognition_model(path_to_training_images, training_image_size)
+    print("People in the Database: ")
+    for name in recognitionModel.names:
+        print(name)
+
     #Trains the model
     if len(recognitionModel.training_labels)>0:
         model.train(recognitionModel.training_images, recognitionModel.training_labels)
@@ -132,7 +136,7 @@ def main():
 
             # Creates new trackers if the Detection has no tracker associated
             for detection in detections:
-                if  detection.x1>border-disabling_offset or detection.x2<width-border+disabling_offset or detection.y1>border-disabling_offset:
+                if  detection.x1>border-disabling_offset or detection.x2<width-border+disabling_offset:
                     if not detection.assigned_to_tracker:
                         tracker = Tracker(detection, id=tracker_counter, image=image_gray)
                         tracker_counter += 1
@@ -146,7 +150,7 @@ def main():
                 if tracker.active==True:
                     bbox = tracker.bboxes[-1] # get last bbox
                     # If the tracker center is outside the border set's it to deactivated
-                    if bbox.x1<border-disabling_offset or bbox.x2>width-border+disabling_offset or bbox.y1<border-disabling_offset:
+                    if bbox.x1<border-disabling_offset or bbox.x2>width-border+disabling_offset:
                          tracker.active=False
 
                     tracker_image=image_gui[int(bbox.y1):int(bbox.y2),int(bbox.x1):int(bbox.x2),:]
@@ -226,6 +230,9 @@ def main():
                                 unknown_count=0
                                 #Constructs the class for recognition model
                                 recognitionModel =recognition_model(path_to_training_images, training_image_size)
+                                print("People in the Database: ")
+                                for name in recognitionModel.names:
+                                    print(name)
                                 #Trains the model
                                 model.train(recognitionModel.training_images, recognitionModel.training_labels)
 
